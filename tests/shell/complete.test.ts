@@ -36,6 +36,7 @@ const fakeTheme: ThemeStore = {
   current: () => 'tokyo',
   mode: () => 'dark',
   set: () => true,
+  preview: () => true,
 }
 
 function setup(aliases: Record<string, string> = {}) {

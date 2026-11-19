@@ -13,8 +13,10 @@ export interface ThemeStore {
   current(): string
   /** 当前实际生效的明暗 */
   mode(): ThemeMode
-  /** 切换主题，返回 false 表示名字不认识 */
+  /** 切换主题并记住，返回 false 表示名字不认识 */
   set(name: string): boolean
+  /** 只应用不落盘，用于实时预览 */
+  preview(name: string): boolean
 }
 
 export function createThemeStore(term: Term, initial = defaultThemeName): ThemeStore {
@@ -23,7 +25,7 @@ export function createThemeStore(term: Term, initial = defaultThemeName): ThemeS
 
   const mode = (): ThemeMode => (media.matches ? 'light' : 'dark')
 
-  const apply = (): void => {
+  const apply = (persist: boolean): void => {
     const theme = findTheme(current)
     if (!theme) return
 
@@ -37,14 +39,16 @@ export function createThemeStore(term: Term, initial = defaultThemeName): ThemeS
     root.style.colorScheme = mode()
 
     // 首屏占位页在 JS 起来之前就要用这两个颜色，所以顺手存一份
+    if (!persist) return
+
     writeStored(NAME, theme.name)
     writeStored('bg', palette.pageBg)
     writeStored('muted', palette.css.muted)
   }
 
   // 系统在浅色/深色之间切换时自动跟着换
-  media.addEventListener('change', apply)
-  apply()
+  media.addEventListener('change', () => apply(true))
+  apply(true)
 
   return {
     names: () => themes.map((theme) => theme.name),
@@ -54,7 +58,14 @@ export function createThemeStore(term: Term, initial = defaultThemeName): ThemeS
       const theme = findTheme(name)
       if (!theme) return false
       current = theme.name
-      apply()
+      apply(true)
+      return true
+    },
+    preview(name: string) {
+      const theme = findTheme(name)
+      if (!theme) return false
+      current = theme.name
+      apply(false)
       return true
     },
   }

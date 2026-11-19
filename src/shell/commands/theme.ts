@@ -1,5 +1,30 @@
 import { dim, green, red } from '../../term/ansi.ts'
-import type { Command } from '../types.ts'
+import { select } from '../../term/select.ts'
+import type { Command, Ctx } from '../types.ts'
+
+/** 交互式选主题：移动即预览，Enter 记住，Esc 还原 */
+async function pick(ctx: Ctx): Promise<void> {
+  const original = ctx.theme.current()
+  const names = ctx.theme.names()
+
+  const picked = await select(ctx.term, {
+    title: '选择主题',
+    hint: `${ctx.theme.mode()} · 深浅跟随系统`,
+    initial: Math.max(0, names.indexOf(original)),
+    items: names.map((name) => ({ value: name, label: name })),
+    onHighlight: (item) => {
+      ctx.theme.preview(item.value)
+    },
+  })
+
+  if (!picked) {
+    ctx.theme.preview(original)
+    return
+  }
+
+  ctx.theme.set(picked.value)
+  ctx.term.println(green(`主题已切换为 ${picked.value}（${ctx.theme.mode()}）`))
+}
 
 const theme: Command = {
   name: 'theme',
@@ -9,16 +34,7 @@ const theme: Command = {
     const name = args[0]
 
     if (!name) {
-      const current = ctx.theme.current()
-      const list = ctx.theme
-        .names()
-        .map((n) => (n === current ? green(n) : n))
-        .join(dim(' / '))
-      ctx.term.println(`主题：${list}`)
-      ctx.term.println(
-        dim(`当前 ${current} · ${ctx.theme.mode()}　用 theme <名字> 切换，深浅跟随系统`),
-      )
-      return
+      return pick(ctx)
     }
 
     if (ctx.theme.set(name)) {

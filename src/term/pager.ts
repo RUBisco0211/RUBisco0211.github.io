@@ -1,6 +1,6 @@
 import { inverse } from './ansi.ts'
 import type { Term } from './terminal.ts'
-import { padEnd, visibleWidth } from './width.ts'
+import { padEnd, truncateTo, visibleWidth } from './width.ts'
 import { wrapAnsi } from './wrap.ts'
 
 export interface PagerInput {
@@ -75,23 +75,9 @@ export function pagerStatus(
   const right = `${Math.min(percent, 100)}%  ·  ${offset + 1}-${Math.min(offset + height, total)}/${total}  ·  q 退出`
   const gap = 2
   const room = Math.max(0, cols - visibleWidth(right) - gap)
-  const left = visibleWidth(title) > room ? truncate(title, room) : title
+  const left = truncateTo(title, room)
   const line = padEnd(`${left}${' '.repeat(gap)}`, cols - visibleWidth(right)) + right
   return inverse(padEnd(line, cols))
-}
-
-/** 按显示宽度截断，末尾补省略号 */
-function truncate(text: string, width: number): string {
-  if (width <= 1) return ''
-  let out = ''
-  let used = 0
-  for (const char of text) {
-    const w = visibleWidth(char)
-    if (used + w > width - 1) break
-    out += char
-    used += w
-  }
-  return `${out}…`
 }
 
 /**

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { padEnd, stripAnsi, visibleWidth } from '../../src/term/width.ts'
+import { padEnd, stripAnsi, truncateTo, visibleWidth } from '../../src/term/width.ts'
 
 test('ASCII 按字符数算', () => {
   assert.equal(visibleWidth('abc'), 3)
@@ -38,4 +38,12 @@ test('padEnd 按显示宽度补空格', () => {
 
 test('padEnd 不会截断超长内容', () => {
   assert.equal(padEnd('abcdef', 3), 'abcdef')
+})
+
+test('truncateTo 按显示宽度截断并补省略号', () => {
+  assert.equal(truncateTo('abcdef', 10), 'abcdef')
+  assert.equal(truncateTo('abcdef', 4), 'abc…')
+  // 中文占 2 列，只能放 1 个字 + 省略号
+  assert.equal(truncateTo('中文中文', 4), '中…')
+  assert.equal(truncateTo('abc', 0), '')
 })

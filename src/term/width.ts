@@ -34,6 +34,23 @@ export function visibleWidth(text: string): number {
   return width
 }
 
+/** 按显示宽度截断，超出时末尾补省略号 */
+export function truncateTo(text: string, width: number): string {
+  if (width <= 0) return ''
+  if (visibleWidth(text) <= width) return text
+  if (width === 1) return '…'
+
+  let out = ''
+  let used = 0
+  for (const char of text) {
+    const w = isWide(char.codePointAt(0) ?? 0) ? 2 : 1
+    if (used + w > width - 1) break
+    out += char
+    used += w
+  }
+  return `${out}…`
+}
+
 /** 按显示宽度右补空格，带颜色的字符串也能正确对齐 */
 export function padEnd(text: string, width: number): string {
   return text + ' '.repeat(Math.max(0, width - visibleWidth(text)))

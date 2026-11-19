@@ -59,6 +59,7 @@ const fakeTheme: ThemeStore = {
   current: () => 'tokyo',
   mode: () => 'dark',
   set: () => true,
+  preview: () => true,
 }
 
 /** 去掉 SGR / OSC 8，行首锚定的断言用 */
