@@ -1,0 +1,92 @@
+:root {
+  color-scheme: dark;
+  --bg: #1a1b26;
+  --muted: #565f89;
+  --accent: #7aa2f7;
+  --font-mono:
+    'Maple Mono NF', 'Maple Mono', 'Maple Mono NF CN', ui-monospace, 'PingFang SC',
+    'Microsoft YaHei', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: var(--font-mono);
+}
+
+/* 只负责留白，不直接放终端 */
+#app {
+  width: 100%;
+  height: 100dvh;
+  padding: 18px 20px 22px;
+  overflow: hidden;
+}
+
+/* 终端的父元素：必须没有 padding，FitAddon 按它的 computed height 算行数 */
+#term {
+  width: 100%;
+  height: 100%;
+}
+
+#term .xterm {
+  height: 100%;
+}
+
+/*
+ * 终端和阅读器共用同一套滚动条样式。
+ * 不写这段的话，两边的宽度和颜色都取决于浏览器默认值，永远对不齐。
+ */
+#term .xterm-viewport,
+.reader-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+#term .xterm-viewport::-webkit-scrollbar,
+.reader-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+#term .xterm-viewport::-webkit-scrollbar-track,
+.reader-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#term .xterm-viewport::-webkit-scrollbar-thumb,
+.reader-scroll::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border: 2px solid transparent;
+  border-radius: 5px;
+  background-clip: content-box;
+}
+
+#term .xterm-viewport::-webkit-scrollbar-thumb:hover,
+.reader-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  background-clip: content-box;
+}
+
+/* 主题生效前先跟系统走，避免浅色模式下闪一下深色 */
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #e1e2e7;
+    --muted: #6172b0;
+    --accent: #2e7de9;
+  }
+}
+
+@media (max-width: 600px) {
+  #app {
+    padding: 10px 10px 14px;
+  }
+}
