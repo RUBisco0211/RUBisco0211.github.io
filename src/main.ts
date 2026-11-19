@@ -7,6 +7,8 @@ import { content } from './content/index.ts'
 import { commands } from './shell/commands/index.ts'
 import { commonPrefix, completeLine } from './shell/complete.ts'
 import { buildFs } from './shell/fs.ts'
+import { highlightLine } from './shell/highlight-line.ts'
+import { lookup } from './shell/fs.ts'
 import { createShell } from './shell/index.ts'
 import { displayPath } from './shell/path.ts'
 import { padEnd, visibleWidth } from './term/width.ts'
@@ -44,6 +46,15 @@ const shell = createShell({
   commands,
   aliases: config.aliases,
 })
+
+// 实时着色：认得的命令青色、别名品红、不认识的红色、选项黄、路径分存在与否
+term.setLineHighlighter((line) =>
+  highlightLine(line, {
+    isCommand: (name) => shell.ctx.registry.get(name) !== undefined,
+    isAlias: (name) => name in config.aliases,
+    resolvePath: (token) => lookup(shell.ctx.fs, shell.ctx.cwd, token).kind,
+  }),
+)
 
 const prompt = (): string =>
   `${green(`${config.user}@${config.host}`)}:${blue(displayPath(shell.ctx.cwd))}$ `

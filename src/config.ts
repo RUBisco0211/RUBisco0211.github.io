@@ -19,8 +19,8 @@ export interface SiteConfig {
 export const config: SiteConfig = {
   user: 'rubisco',
   host: 'tty.blog',
-  defaultTheme: 'tokyo',
-  fontSize: 14,
+  defaultTheme: 'github',
+  fontSize: 13,
   lineHeight: 1.4,
   fontFamily:
     '"Maple Mono NF", "Maple Mono", "Maple Mono NF CN", ui-monospace, "PingFang SC", "Microsoft YaHei", monospace',

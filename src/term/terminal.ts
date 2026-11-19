@@ -171,6 +171,21 @@ export class Term {
   }
 
   /** 终端当前列数，给需要按宽度排版的命令用 */
+  /**
+   * 接管命令行的实时着色。
+   *
+   * readline 每次重绘会把 highlightPrompt(prompt) + highlight(line, pos) 拼起来，
+   * 所以返回的字符串必须保持字符原样、只插样式。
+   */
+  setLineHighlighter(highlight: (line: string, pos: number) => string): void {
+    this.readline.setHighlighter({
+      highlight,
+      highlightPrompt: (prompt) => prompt,
+      // 行都很短，直接每次全量重绘，省得判断"这个词的类别变了没"
+      highlightChar: () => true,
+    })
+  }
+
   /** 历史命令，最新的在前 */
   historyEntries(): string[] {
     return [...this.siteHistory.entries]

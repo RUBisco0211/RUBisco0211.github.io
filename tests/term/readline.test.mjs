@@ -166,3 +166,36 @@ test('回填用的是未 flush 的真实时序，也要成功', async () => {
   assert.deepEqual(lines(term), ['$ theme github'])
   assert.equal(rl.getLine(), 'theme github')
 })
+
+test('高亮不会打乱屏幕内容和光标', async () => {
+  globalThis.window = {
+    localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+  }
+  const { default: headless } = await import('@xterm/headless')
+  const { Readline } = await import('xterm-readline')
+  const { highlightLine } = await import('../../src/shell/highlight-line.ts')
+
+  const term = new headless.Terminal({ cols: 40, rows: 10, allowProposedApi: true })
+  term.attachCustomKeyEventHandler = () => {}
+  const rl = new Readline()
+  rl.setHighlighter({
+    highlight: (line) =>
+      highlightLine(line, {
+        isCommand: (name) => name === 'ls',
+        isAlias: () => false,
+        resolvePath: () => 'dir',
+      }),
+    highlightPrompt: (prompt) => prompt,
+    highlightChar: () => true,
+  })
+  term.loadAddon(rl)
+  rl.read('$ ').catch(() => {})
+  await flush(term)
+
+  await type(term, 'ls -l blog/')
+
+  // ANSI 只影响颜色，屏幕上的字符和光标位置都不该变
+  assert.deepEqual(lines(term), ['$ ls -l blog/'])
+  assert.equal(rl.getLine(), 'ls -l blog/')
+  assert.equal(term.buffer.active.cursorX, 13) // "$ " + "ls -l blog/"
+})
