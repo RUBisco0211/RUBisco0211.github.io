@@ -8,13 +8,9 @@
 
 import { cyan, green, magenta, red, yellow } from '../term/ansi.ts'
 
-export type PathKind = 'dir' | 'file' | 'missing'
-
 export interface LineClassifier {
   isCommand(name: string): boolean
   isAlias(name: string): boolean
-  /** 只有长得像路径的 token 才会问这个 */
-  resolvePath(token: string): PathKind
 }
 
 /** 成对引号或一段非空白 */
@@ -22,10 +18,6 @@ const TOKEN = /"[^"]*"|'[^']*'|\S+/g
 
 const isQuoted = (token: string): boolean =>
   token.length >= 2 && (token[0] === '"' || token[0] === "'") && token.at(-1) === token[0]
-
-/** 看起来像路径：带分隔符、或者以 . / ~ 开头 */
-export const looksLikePath = (token: string): boolean =>
-  token.includes('/') || token.startsWith('.') || token.startsWith('~')
 
 function paint(token: string, index: number, classify: LineClassifier): string {
   if (isQuoted(token)) return green(token)
@@ -36,12 +28,6 @@ function paint(token: string, index: number, classify: LineClassifier): string {
   }
 
   if (token.startsWith('-') && token.length > 1) return yellow(token)
-
-  if (looksLikePath(token)) {
-    const kind = classify.resolvePath(token)
-    if (kind === 'missing') return red(token)
-    return kind === 'dir' ? cyan(token) : token
-  }
 
   return token
 }

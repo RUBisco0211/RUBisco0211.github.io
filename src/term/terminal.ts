@@ -3,9 +3,21 @@ import { FitAddon } from '@xterm/addon-fit'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Readline } from 'xterm-readline'
+import { State as ReadlineState } from 'xterm-readline/lib/state.js'
 import type { History } from 'xterm-readline/lib/history.js'
 import { SiteHistory } from './history.ts'
 import '@xterm/xterm/css/xterm.css'
+
+/**
+ * readline 在回车前会调 State.refreshUnhighlighted()，把这一行重画成无样式再
+ * 冻进 scrollback —— 它的理由是「丢掉跟随光标的提示（比如括号匹配）」。
+ *
+ * 我们想要的是语法着色留在屏幕上，而且我们的高亮不依赖光标，所以把这个方法
+ * 换成空实现。改了库的内部行为，升级 xterm-readline 时要复查（有测试盯着）。
+ */
+ReadlineState.prototype.refreshUnhighlighted = function noop(): void {
+  // 保留当前渲染，不重画成无样式
+}
 
 export interface TermOptions {
   theme: ITheme

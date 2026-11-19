@@ -199,3 +199,39 @@ test('高亮不会打乱屏幕内容和光标', async () => {
   assert.equal(rl.getLine(), 'ls -l blog/')
   assert.equal(term.buffer.active.cursorX, 13) // "$ " + "ls -l blog/"
 })
+
+test('回车之后高亮保留在 scrollback 里（靠 patch refreshUnhighlighted）', async () => {
+  globalThis.window = {
+    localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+  }
+  const { default: headless } = await import('@xterm/headless')
+  const { Readline } = await import('xterm-readline')
+  const { State } = await import('xterm-readline/lib/state.js')
+
+  // 和 src/term/terminal.ts 里那处 patch 保持一致
+  State.prototype.refreshUnhighlighted = function noop() {}
+
+  const term = new headless.Terminal({ cols: 30, rows: 10, allowProposedApi: true })
+  term.attachCustomKeyEventHandler = () => {}
+  const rl = new Readline()
+  rl.setHighlighter({
+    highlight: (line) => `\x1b[36m${line}\x1b[39m`,
+    highlightPrompt: (prompt) => prompt,
+    highlightChar: () => true,
+  })
+  term.loadAddon(rl)
+
+  rl.read('$ ').catch(() => {})
+  await flush(term)
+  await type(term, 'ls blog')
+
+  // 输入过程中是青色（ANSI 36 → 调色板 6）
+  assert.equal(term.buffer.active.getLine(0).getCell(2).getFgColor(), 6)
+
+  term.input('\r', true)
+  await flush(term)
+
+  // 回车后这一行冻进 scrollback，颜色还在
+  assert.equal(term.buffer.active.getLine(0).getCell(2).getFgColor(), 6)
+  assert.equal(rl.getLine(), 'ls blog')
+})
