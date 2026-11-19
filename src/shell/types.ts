@@ -17,6 +17,8 @@ export interface Ctx {
   readonly cwd: string
   /** 成功返回 null，失败返回错误消息 */
   chdir(target: string): string | null
+  /** 执行另一条命令（走完整的 alias 展开和分发），history 重放用 */
+  run(line: string): Promise<void>
 }
 
 export interface Completion {

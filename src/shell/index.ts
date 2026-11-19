@@ -53,6 +53,9 @@ export function createShell(deps: ShellDeps): Shell {
       }
       return found.kind === 'file' ? `不是目录：${target}` : `没有这个目录：${target}`
     },
+    run(line) {
+      return run(line)
+    },
   }
 
   async function run(line: string): Promise<void> {

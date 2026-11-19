@@ -11,12 +11,24 @@ export interface SelectItem<T> {
 
 export interface SelectOptions<T> {
   readonly title: string
+  /** 允许输入关键字筛选（打开后 Esc 才是唯一取消键，q 变成普通字符） */
+  readonly filterable?: boolean
   readonly items: readonly SelectItem<T>[]
   readonly hint?: string
   /** 初始选中项 */
   readonly initial?: number
   /** 光标移动时回调，用来做实时预览 */
   readonly onHighlight?: (item: SelectItem<T>, index: number) => void
+}
+
+/** 按 label + detail 做子串筛选，忽略大小写 */
+export function filterItems<T>(
+  items: readonly SelectItem<T>[],
+  query: string,
+): readonly SelectItem<T>[] {
+  const needle = query.trim().toLowerCase()
+  if (needle === '') return items
+  return items.filter((item) => `${item.label} ${item.detail ?? ''}`.toLowerCase().includes(needle))
 }
 
 /** 让选中项始终留在可视窗口里 */
@@ -38,13 +50,14 @@ export function select<T>(
   term: Term,
   options: SelectOptions<T>,
 ): Promise<SelectItem<T> | undefined> {
-  const { items } = options
-  if (items.length === 0) return Promise.resolve(undefined)
+  if (options.items.length === 0) return Promise.resolve(undefined)
 
   const rows = term.rows
   const cols = term.cols
   const visible = Math.max(1, rows - 3)
 
+  let query = ''
+  let items = options.items
   let index = Math.min(Math.max(options.initial ?? 0, 0), items.length - 1)
   let offset = 0
 
@@ -56,7 +69,9 @@ export function select<T>(
       parts.push(`\x1b[${row + 1};1H\x1b[2K${truncateTo(text, cols)}`)
     }
 
-    put(0, `${bold(options.title)}${options.hint ? `  ${dim(options.hint)}` : ''}`)
+    const heading = query === '' ? options.title : `${options.title} · ${query}`
+    const hint = options.hint ? dim(options.hint) : ''
+    put(0, `${bold(heading)}${hint ? `  ${hint}` : ''}`)
 
     for (let line = 0; line < visible; line += 1) {
       const item = items[offset + line]
@@ -71,13 +86,15 @@ export function select<T>(
       put(line + 1, ` ${marker} ${label}${detail}`)
     }
 
-    put(rows - 1, dim(`${index + 1}/${items.length}　↑↓ 移动　Enter 确认　Esc 取消`))
+    const position = items.length === 0 ? '无匹配' : `${index + 1}/${items.length}`
+    put(rows - 1, dim(`${position}　↑↓ 移动　Enter 确认　Esc 取消`))
     term.write(parts.join(''))
   }
 
   term.write('\x1b[?1049h\x1b[H\x1b[2J')
   draw()
-  options.onHighlight?.(items[index]!, index)
+  const initialItem = items[index]
+  if (initialItem) options.onHighlight?.(initialItem, index)
 
   return new Promise((resolve) => {
     const finish = (result: SelectItem<T> | undefined): void => {
@@ -87,11 +104,23 @@ export function select<T>(
     }
 
     const move = (delta: number): void => {
+      if (items.length === 0) return
       const next = Math.min(Math.max(index + delta, 0), items.length - 1)
       if (next === index) return
       index = next
       draw()
-      options.onHighlight?.(items[index]!, index)
+      const current = items[index]
+      if (current) options.onHighlight?.(current, index)
+    }
+
+    /** 改筛选词后重算列表，光标回到第一项 */
+    const refilter = (next: string): void => {
+      query = next
+      items = filterItems(options.items, query)
+      index = 0
+      offset = 0
+      draw()
+      if (items[0]) options.onHighlight?.(items[0], 0)
     }
 
     const release = term.captureKeys((event) => {
@@ -100,18 +129,31 @@ export function select<T>(
           finish(items[index])
           return
         case 'Escape':
-        case 'q':
           finish(undefined)
           return
         case 'ArrowUp':
-        case 'k':
           move(-1)
           return
         case 'ArrowDown':
-        case 'j':
           move(1)
           return
       }
+
+      // 可筛选时不占用字母键做移动，q 也不能当取消
+      if (options.filterable) {
+        if (event.key === 'Backspace') {
+          refilter(query.slice(0, -1))
+          return
+        }
+        if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          refilter(query + event.key)
+        }
+        return
+      }
+
+      if (event.key === 'q') finish(undefined)
+      else if (event.key === 'k') move(-1)
+      else if (event.key === 'j') move(1)
     })
   })
 }

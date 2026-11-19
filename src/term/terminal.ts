@@ -36,6 +36,7 @@ export class Term {
   readonly readline: Readline
 
   private readonly host: HTMLElement
+  private readonly siteHistory: SiteHistory
   private readonly fitAddon = new FitAddon()
   private readonly observer: ResizeObserver
   /** 上一次列出的内容，避免连按 Tab 时重复堆叠同一份候选 */
@@ -64,9 +65,10 @@ export class Term {
     this.readline = new Readline()
     // xterm-readline 在构造函数里就用裸 key 'history' 恢复过一次，这里换成
     // 带前缀的实现并重新恢复，顺带把旧数据迁移过来
+    this.siteHistory = new SiteHistory(50)
     const withHistory = this.readline as unknown as { history: History }
-    withHistory.history = new SiteHistory(50)
-    withHistory.history.restoreFromLocalStorage()
+    withHistory.history = this.siteHistory
+    this.siteHistory.restoreFromLocalStorage()
     this.xterm.loadAddon(this.readline)
 
     this.xterm.open(host)
@@ -133,6 +135,21 @@ export class Term {
   }
 
   /** 终端当前列数，给需要按宽度排版的命令用 */
+  /** 历史命令，最新的在前 */
+  historyEntries(): string[] {
+    return [...this.siteHistory.entries]
+  }
+
+  /** 手动追加一条（绕开 read() 直接执行命令时用） */
+  appendHistory(text: string): void {
+    this.siteHistory.append(text)
+  }
+
+  clearHistory(): void {
+    this.siteHistory.entries = []
+    this.siteHistory.saveToLocalStorage()
+  }
+
   /** 终端尺寸变化（FitAddon 已经处理过 fit，这里只是转发） */
   onResize(handler: () => void): () => void {
     const subscription = this.xterm.onResize(() => handler())

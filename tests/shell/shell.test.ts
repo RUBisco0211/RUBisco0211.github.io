@@ -6,6 +6,7 @@ import cat from '../../src/shell/commands/cat.ts'
 import cd from '../../src/shell/commands/cd.ts'
 import ls from '../../src/shell/commands/ls.ts'
 import pwd from '../../src/shell/commands/pwd.ts'
+import history from '../../src/shell/commands/history.ts'
 import search from '../../src/shell/commands/search.ts'
 import { buildFs } from '../../src/shell/fs.ts'
 import { createShell, type ShellDeps } from '../../src/shell/index.ts'
@@ -69,6 +70,7 @@ const plain = (text: string): string =>
 function setup(aliases: Record<string, string> = {}) {
   const lines: string[] = []
   const written: string[] = []
+  const cleared = { count: 0 }
   const term = {
     println: (text = '') => void lines.push(text),
     write: (data: string) => void written.push(data),
@@ -80,6 +82,11 @@ function setup(aliases: Record<string, string> = {}) {
       return () => {}
     },
     onResize: () => () => {},
+    historyEntries: () => [] as string[],
+    appendHistory: () => {},
+    clearHistory: () => {
+      cleared.count += 1
+    },
   } as unknown as Term
   const deps: ShellDeps = {
     term,
@@ -87,11 +94,11 @@ function setup(aliases: Record<string, string> = {}) {
     config,
     fs: buildFs(docs),
     content: fakeContent,
-    commands: [cd, ls, cat, pwd, search],
+    commands: [cd, ls, cat, pwd, search, history],
     aliases,
   }
   const shell = createShell(deps)
-  return { shell, lines, written, out: () => lines.join('\n') }
+  return { shell, lines, written, cleared, out: () => lines.join('\n') }
 }
 
 test('ls 在根目录列出目录', async () => {
@@ -252,4 +259,17 @@ test('未知命令给出提示', async () => {
   await shell.run('lss')
   assert.match(out(), /没有这个命令：lss/)
   assert.doesNotMatch(out(), /help/)
+})
+
+test('history 没有记录时给出提示', async () => {
+  const { shell, out } = setup()
+  await shell.run('history')
+  assert.match(out(), /还没有历史记录/)
+})
+
+test('history -c 清空历史', async () => {
+  const { shell, out, cleared } = setup()
+  await shell.run('history -c')
+  assert.equal(cleared.count, 1)
+  assert.match(out(), /历史已清空/)
 })
