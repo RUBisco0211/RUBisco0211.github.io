@@ -110,22 +110,41 @@ export class Term {
    * 显示提示符并等一行输入。历史由 SiteHistory 落到 localStorage。
    *
    * initial 非空时会把内容回填到输入行（光标在末尾），用户可以继续编辑。
-   * readline 的 state 是在提示符写完之后才建的，所以排一个空的 write 回调
-   * 来等它 —— xterm 的 write 是排队执行的，我们的回调必然在提示符之后。
    */
   read(prompt: string, initial = ''): Promise<string> {
     const pending = this.readline.read(prompt)
-    if (initial === '') return pending
-
-    this.xterm.write('', () => {
-      try {
-        this.readline.updateLine(initial)
-      } catch {
-        // readline 状态已经没了（比如被 Ctrl-C 取消），忽略
-      }
-    })
-
+    if (initial !== '') this.prefill(initial)
     return pending
+  }
+
+  /**
+   * 等 readline 把提示符和内部 state 准备好，再把内容填进输入行。
+   *
+   * 不能直接 updateLine：readline 的 printPrompt 是「排一个 write，在该回调里
+   * 再排一个，最后一个里边才 new State()」。我们自己排的 write 会插在中间，
+   * 那时 state 还没建 —— 只会静默失败。
+   *
+   * 所以轮询到 `printingPrompt` 落回 false 再动手：readline 在 finish() 里才
+   * 置 false，而 finish 是在 done()（建 State）之后调的。
+   */
+  private prefill(text: string, attempts = 60): void {
+    const internals = this.readline as unknown as {
+      activeRead?: unknown
+      printingPrompt?: boolean
+      state?: unknown
+    }
+
+    if (this.disposed || internals.activeRead === undefined) return
+    if (internals.printingPrompt || internals.state === undefined) {
+      if (attempts > 0) setTimeout(() => this.prefill(text, attempts - 1), 0)
+      return
+    }
+
+    try {
+      this.readline.updateLine(text)
+    } catch {
+      // readline 状态已经没了（比如被 Ctrl-C 取消），忽略
+    }
   }
 
   /** 写一行（自动补换行），走 readline 的通道以保持它的光标记账正确。 */

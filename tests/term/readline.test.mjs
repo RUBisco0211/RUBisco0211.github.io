@@ -107,13 +107,31 @@ test('多次列候选不会累积错位', async () => {
   assert.equal(rl.getLine(), 'cd b')
 })
 
-test('回填：提示符写完之后再 updateLine，能填进输入行', async () => {
-  // setup 里已经开了一次 read()
-  const { term, rl } = await setup()
-
-  // 与 Term.read(prompt, initial) 同一套时序：read() 之后排一个空 write
-  term.write('', () => rl.updateLine('ls blog'))
+/**
+ * 回填的真实时序：read() 之后立刻排队是不行的 —— readline 的 printPrompt
+ * 会排两层 write 才建 State，所以我们排的 write 插在中间，那时 state 还没有。
+ * Term.prefill 是轮询到 printingPrompt 落回 false 再 updateLine，这里复刻同一套。
+ */
+async function prefillWhenReady(term, rl, text) {
+  await new Promise((resolve) => {
+    const tick = () => {
+      if (rl.printingPrompt || rl.state === undefined) {
+        setTimeout(tick, 0)
+        return
+      }
+      rl.updateLine(text)
+      resolve()
+    }
+    tick()
+  })
+  // updateLine 的重绘也是排队写出去的，等它落地
   await flush(term)
+}
+
+test('回填：内容进到输入行，光标在末尾', async () => {
+  const { term, rl } = await setup()
+  // setup 里已经 flush 过，这里重新开一次 read 模拟真实调用
+  await prefillWhenReady(term, rl, 'ls blog')
 
   assert.deepEqual(lines(term), ['$ ls blog'])
   assert.equal(rl.getLine(), 'ls blog')
@@ -121,10 +139,30 @@ test('回填：提示符写完之后再 updateLine，能填进输入行', async 
 
 test('回填之后继续输入接在末尾', async () => {
   const { term, rl } = await setup()
-  term.write('', () => rl.updateLine('ls blog'))
-  await flush(term)
-
+  await prefillWhenReady(term, rl, 'ls blog')
   await type(term, ' --help')
+
   assert.deepEqual(lines(term), ['$ ls blog --help'])
   assert.equal(rl.getLine(), 'ls blog --help')
+})
+
+test('回填用的是未 flush 的真实时序，也要成功', async () => {
+  globalThis.window = {
+    localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+  }
+  const { default: headless } = await import('@xterm/headless')
+  const { Readline } = await import('xterm-readline')
+
+  const term = new headless.Terminal({ cols: 40, rows: 10, allowProposedApi: true })
+  term.attachCustomKeyEventHandler = () => {}
+  const rl = new Readline()
+  term.loadAddon(rl)
+
+  rl.read('$ ').catch(() => {})
+  // 关键：不 flush，立刻按 Term.prefill 的方式等
+  await prefillWhenReady(term, rl, 'theme github')
+  await flush(term)
+
+  assert.deepEqual(lines(term), ['$ theme github'])
+  assert.equal(rl.getLine(), 'theme github')
 })
