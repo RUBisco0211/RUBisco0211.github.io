@@ -4,7 +4,7 @@ import type { Command } from '../types.ts'
 
 const cat: Command = {
   name: 'cat',
-  description: '整屏阅读文档',
+  description: '阅读文档',
   usage: 'cat <文件>',
   complete: (ctx, _argv, current) => completePath(ctx, current),
   async run(ctx, args) {

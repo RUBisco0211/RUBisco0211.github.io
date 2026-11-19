@@ -81,7 +81,7 @@ const style = (level: Cell['level'], text: string): string => {
 
 const matrix: Command = {
   name: 'matrix',
-  description: '数字雨，q 退出',
+  description: '数字雨',
   run(ctx) {
     const term = ctx.term
     const cols = term.cols

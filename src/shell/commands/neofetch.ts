@@ -154,7 +154,7 @@ export function layout(
 
 const neofetch: Command = {
   name: 'neofetch',
-  description: '显示站点与终端信息',
+  description: '显示个人、站点与终端信息',
   async run(ctx) {
     const info = buildInfo({
       docs: ctx.content.docs,

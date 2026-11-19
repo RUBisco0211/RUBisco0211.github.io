@@ -107,7 +107,7 @@ export function statsLines(docs: readonly DocMeta[], cols: number): string[] {
 
 const stats: Command = {
   name: 'stats',
-  description: '站点统计：按月分布、篇幅排行',
+  description: '站点统计',
   run(ctx) {
     for (const line of statsLines(ctx.content.docs, ctx.term.cols)) ctx.term.println(line)
   },

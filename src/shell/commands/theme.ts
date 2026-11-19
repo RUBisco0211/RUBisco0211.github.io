@@ -28,7 +28,7 @@ async function pick(ctx: Ctx): Promise<void> {
 
 const theme: Command = {
   name: 'theme',
-  description: '切换主题，不带参数则列出',
+  description: '切换主题',
   usage: 'theme [名字]',
   run(ctx, args) {
     const name = args[0]

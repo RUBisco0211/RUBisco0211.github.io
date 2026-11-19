@@ -84,7 +84,7 @@ export function tagDocsLines(bucket: TagBucket, cols: number): string[] {
 
 const tags: Command = {
   name: 'tags',
-  description: '标签列表，带上名字只看该标签下的文章',
+  description: '标签列表',
   usage: 'tags [标签]',
   run(ctx, args) {
     const buckets = tagBuckets(ctx.content.docs)

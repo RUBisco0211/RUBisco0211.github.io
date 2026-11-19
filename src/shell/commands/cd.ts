@@ -4,7 +4,7 @@ import type { Command } from '../types.ts'
 
 const cd: Command = {
   name: 'cd',
-  description: '切换目录，不带参数回到根目录',
+  description: '切换目录',
   usage: 'cd [路径]',
   complete: (ctx, _argv, current) => completePath(ctx, current),
   run(ctx, args) {

@@ -4,7 +4,7 @@ import type { Command } from '../types.ts'
 
 const history: Command = {
   name: 'history',
-  description: '浏览历史命令，选中后填到提示符里',
+  description: '浏览历史命令',
   usage: 'history [-c]',
   async run(ctx, args) {
     if (args[0] === '-c') {
