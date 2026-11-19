@@ -106,9 +106,26 @@ export class Term {
     document.fonts?.addEventListener?.('loadingdone', () => this.fitAddon.fit())
   }
 
-  /** 显示提示符并等一行输入。历史由 SiteHistory 落到 localStorage。 */
-  read(prompt: string): Promise<string> {
-    return this.readline.read(prompt)
+  /**
+   * 显示提示符并等一行输入。历史由 SiteHistory 落到 localStorage。
+   *
+   * initial 非空时会把内容回填到输入行（光标在末尾），用户可以继续编辑。
+   * readline 的 state 是在提示符写完之后才建的，所以排一个空的 write 回调
+   * 来等它 —— xterm 的 write 是排队执行的，我们的回调必然在提示符之后。
+   */
+  read(prompt: string, initial = ''): Promise<string> {
+    const pending = this.readline.read(prompt)
+    if (initial === '') return pending
+
+    this.xterm.write('', () => {
+      try {
+        this.readline.updateLine(initial)
+      } catch {
+        // readline 状态已经没了（比如被 Ctrl-C 取消），忽略
+      }
+    })
+
+    return pending
   }
 
   /** 写一行（自动补换行），走 readline 的通道以保持它的光标记账正确。 */

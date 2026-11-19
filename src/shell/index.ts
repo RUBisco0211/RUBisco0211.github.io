@@ -23,6 +23,8 @@ export interface ShellDeps {
 export interface Shell {
   readonly ctx: Ctx
   run(line: string): Promise<void>
+  /** 取出待回填的命令（取完即清空），交给下一次 term.read() */
+  takePrefill(): string
 }
 
 /**
@@ -34,6 +36,7 @@ export function createShell(deps: ShellDeps): Shell {
   const registry = createRegistry(deps.commands)
   const expand = createAliasExpander(deps.aliases ?? {})
   let cwd = '/'
+  let prefill = ''
 
   const ctx: Ctx = {
     term: deps.term,
@@ -56,6 +59,9 @@ export function createShell(deps: ShellDeps): Shell {
     run(line) {
       return run(line)
     },
+    prefill(line) {
+      prefill = line
+    },
   }
 
   async function run(line: string): Promise<void> {
@@ -72,5 +78,13 @@ export function createShell(deps: ShellDeps): Shell {
     await command.run(ctx, args)
   }
 
-  return { ctx, run }
+  return {
+    ctx,
+    run,
+    takePrefill() {
+      const pending = prefill
+      prefill = ''
+      return pending
+    },
+  }
 }

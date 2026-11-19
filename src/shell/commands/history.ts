@@ -4,7 +4,7 @@ import type { Command } from '../types.ts'
 
 const history: Command = {
   name: 'history',
-  description: '浏览历史命令，选中直接执行',
+  description: '浏览历史命令，选中后填到提示符里',
   usage: 'history [-c]',
   async run(ctx, args) {
     if (args[0] === '-c') {
@@ -28,9 +28,8 @@ const history: Command = {
 
     if (!picked) return
 
-    // 重放的命令不会经过 read()，所以手动补一条历史
-    ctx.term.appendHistory(picked.value)
-    await ctx.run(picked.value)
+    // 只填到提示符里，回车由用户自己按（这样还能继续改）
+    ctx.prefill(picked.value)
   },
 }
 

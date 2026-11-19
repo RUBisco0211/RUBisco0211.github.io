@@ -128,8 +128,9 @@ npm run format        # prettier
 ## 容易踩的坑
 
 1. **readline 的私有 API**
-   `Term.showCompletions()` 用的是 `printPrompt` + `state.reanchor`（没有公开的「打印并重绘」接口）。
-   `tests/term/readline-completions.test.mjs` 里有一份同样的调用序列——它是**副本**，改 `terminal.ts` 时必须手动同步，否则测试全绿但行为已坏（已经发生过一次）。
+   `Term.showCompletions()` 用的是 `printPrompt` + `state.reanchor`（没有公开的「打印并重绘」接口）；
+   `Term.read(prompt, initial)` 靠"排一个空 write 再 updateLine"来等 readline 建好 state。
+   `tests/term/readline.test.mjs` 里有一份同样的调用序列——它是**副本**，改 `terminal.ts` 时必须手动同步，否则测试全绿但行为已坏（已经发生过一次）。
 
 2. **FitAddon 读的是父元素的 computed `height`**
    它只扣掉 `.xterm` 自己的 padding，**不管父元素的 padding**。所以终端必须放在无内边距的 `#term` 里，留白由外层 `#app` 负责。否则会多算出行数，最后一行被裁掉。

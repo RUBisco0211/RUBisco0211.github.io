@@ -71,6 +71,8 @@ function setup(aliases: Record<string, string> = {}) {
   const lines: string[] = []
   const written: string[] = []
   const cleared = { count: 0 }
+  const keys = { next: 'Escape' }
+  let historyEntries: string[] = []
   const term = {
     println: (text = '') => void lines.push(text),
     write: (data: string) => void written.push(data),
@@ -78,11 +80,11 @@ function setup(aliases: Record<string, string> = {}) {
     rows: 24,
     // pager 会接管键盘，这里直接模拟按 Esc 退出
     captureKeys: (handler: (event: KeyboardEvent) => void) => {
-      queueMicrotask(() => handler({ key: 'Escape' } as KeyboardEvent))
+      queueMicrotask(() => handler({ key: keys.next } as KeyboardEvent))
       return () => {}
     },
     onResize: () => () => {},
-    historyEntries: () => [] as string[],
+    historyEntries: () => historyEntries,
     appendHistory: () => {},
     clearHistory: () => {
       cleared.count += 1
@@ -98,7 +100,17 @@ function setup(aliases: Record<string, string> = {}) {
     aliases,
   }
   const shell = createShell(deps)
-  return { shell, lines, written, cleared, out: () => lines.join('\n') }
+  return {
+    shell,
+    lines,
+    written,
+    cleared,
+    keys,
+    setHistory(next: string[]) {
+      historyEntries = next
+    },
+    out: () => lines.join('\n'),
+  }
 }
 
 test('ls 在根目录列出目录', async () => {
@@ -272,4 +284,19 @@ test('history -c 清空历史', async () => {
   await shell.run('history -c')
   assert.equal(cleared.count, 1)
   assert.match(out(), /历史已清空/)
+})
+
+test('history 选中后只回填提示符，不直接执行', async () => {
+  const { shell, keys, setHistory, out } = setup()
+  setHistory(['theme github', 'ls blog'])
+  keys.next = 'Enter'
+
+  await shell.run('history')
+
+  // 取出来的是待回填的命令
+  assert.equal(shell.takePrefill(), 'theme github')
+  // 取过一次就清空
+  assert.equal(shell.takePrefill(), '')
+  // 没有真的执行（否则会打主题切换的提示）
+  assert.doesNotMatch(out(), /主题已切换/)
 })

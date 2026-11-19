@@ -1,9 +1,9 @@
 /**
- * 验证 Tab 补全依赖的 readline 私有 API 契约。
+ * 验证我们依赖的 readline 私有 API 契约（Tab 补全 + 输入行回填）。
  *
- * Term.showCompletions() 用的是 printPrompt + state.reanchor 这套非公开接口
- * （readline 没有"打印并重绘"的公开方法）。如果哪天升级 xterm-readline 后
- * 行为变了，这里会先炸，而不是等用户按 Tab 才发现。
+ * Term.showCompletions() 用 printPrompt + state.reanchor，
+ * Term.read(prompt, initial) 用"排一个空 write 再 updateLine"来等 readline
+ * 把 state 建好 —— 都是非公开接口。升级 xterm-readline 后行为变了，这里先炸。
  *
  * 用 .mjs 而不是 .ts：@xterm/headless 是 CJS，且需要给 window 打桩，
  * 走 TS 要绕一堆类型，不值得。
@@ -105,4 +105,26 @@ test('多次列候选不会累积错位', async () => {
 
   assert.deepEqual(lines(term), ['$ cd b', 'blog/', '$ cd b'])
   assert.equal(rl.getLine(), 'cd b')
+})
+
+test('回填：提示符写完之后再 updateLine，能填进输入行', async () => {
+  // setup 里已经开了一次 read()
+  const { term, rl } = await setup()
+
+  // 与 Term.read(prompt, initial) 同一套时序：read() 之后排一个空 write
+  term.write('', () => rl.updateLine('ls blog'))
+  await flush(term)
+
+  assert.deepEqual(lines(term), ['$ ls blog'])
+  assert.equal(rl.getLine(), 'ls blog')
+})
+
+test('回填之后继续输入接在末尾', async () => {
+  const { term, rl } = await setup()
+  term.write('', () => rl.updateLine('ls blog'))
+  await flush(term)
+
+  await type(term, ' --help')
+  assert.deepEqual(lines(term), ['$ ls blog --help'])
+  assert.equal(rl.getLine(), 'ls blog --help')
 })

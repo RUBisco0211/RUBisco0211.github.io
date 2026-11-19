@@ -90,7 +90,7 @@ async function loop(): Promise<void> {
   for (;;) {
     let line: string
     try {
-      line = await term.read(prompt())
+      line = await term.read(prompt(), shell.takePrefill())
     } catch {
       // Ctrl-C 取消 / abort，重开一次提示符
       continue

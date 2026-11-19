@@ -17,8 +17,10 @@ export interface Ctx {
   readonly cwd: string
   /** 成功返回 null，失败返回错误消息 */
   chdir(target: string): string | null
-  /** 执行另一条命令（走完整的 alias 展开和分发），history 重放用 */
+  /** 执行另一条命令（走完整的 alias 展开和分发） */
   run(line: string): Promise<void>
+  /** 把一条命令填到下一次提示符里，让用户自己按回车 */
+  prefill(line: string): void
 }
 
 export interface Completion {
