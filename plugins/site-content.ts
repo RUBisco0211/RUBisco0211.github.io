@@ -14,68 +14,71 @@ const RESOLVED_ID = `\0${MODULE_ID}`
  * 源码树和 dist 里都不存在"另一份内容"。
  */
 export function siteContent(): Plugin {
-  let content = readContent()
+    let content = readContent()
 
-  return {
-    name: 'tty:site-content',
+    return {
+        name: 'tty:site-content',
 
-    buildStart() {
-      content = readContent()
-      this.info(`content: ${content.docs.length} doc(s)`)
-    },
+        buildStart() {
+            content = readContent()
+            this.info(`content: ${content.docs.length} doc(s)`)
+        },
 
-    resolveId(id) {
-      if (id === MODULE_ID) return RESOLVED_ID
-    },
+        resolveId(id) {
+            if (id === MODULE_ID) return RESOLVED_ID
+        },
 
-    load(id) {
-      if (id !== RESOLVED_ID) return
-      return `export const siteTree = ${JSON.stringify({ docs: content.docs })}`
-    },
+        load(id) {
+            if (id !== RESOLVED_ID) return
+            return `export const siteTree = ${JSON.stringify({ docs: content.docs })}`
+        },
 
-    configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        const path = (req.url ?? '').split('?')[0] ?? ''
-        if (!path.startsWith(TEXT_URL_PREFIX)) return next()
+        configureServer(server) {
+            server.middlewares.use((req, res, next) => {
+                const path = (req.url ?? '').split('?')[0] ?? ''
+                if (!path.startsWith(TEXT_URL_PREFIX)) return next()
 
-        let target: string
-        try {
-          target = resolve(CONTENT_DIR, decodeURIComponent(path.slice(TEXT_URL_PREFIX.length)))
-        } catch {
-          res.statusCode = 400
-          res.end('bad path')
-          return
-        }
+                let target: string
+                try {
+                    target = resolve(
+                        CONTENT_DIR,
+                        decodeURIComponent(path.slice(TEXT_URL_PREFIX.length)),
+                    )
+                } catch {
+                    res.statusCode = 400
+                    res.end('bad path')
+                    return
+                }
 
-        // 只放行 content/ 目录内的 markdown，挡住 ../ 穿越和其它文件
-        if (!target.startsWith(CONTENT_DIR + sep) || !/\.mdx?$/.test(target)) {
-          res.statusCode = 404
-          res.end('not found')
-          return
-        }
+                // 只放行 content/ 目录内的 markdown，挡住 ../ 穿越和其它文件
+                if (!target.startsWith(CONTENT_DIR + sep) || !/\.mdx?$/.test(target)) {
+                    res.statusCode = 404
+                    res.end('not found')
+                    return
+                }
 
-        try {
-          res.setHeader('Content-Type', 'text/plain; charset=utf-8')
-          res.end(readFileSync(target))
-        } catch {
-          res.statusCode = 404
-          res.end('not found')
-        }
-      })
+                try {
+                    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+                    res.end(readFileSync(target))
+                } catch {
+                    res.statusCode = 404
+                    res.end('not found')
+                }
+            })
 
-      const onChange = (file: string) => {
-        if (!file.startsWith(CONTENT_DIR)) return
-        try {
-          content = readContent()
-          server.config.logger.info('content rebuilt', { timestamp: true })
-          server.ws.send({ type: 'full-reload' })
-        } catch (error) {
-          server.config.logger.error(`content rebuild failed: ${String(error)}`)
-        }
-      }
-      server.watcher.on('change', onChange)
-      server.watcher.on('add', onChange)
-      server.watcher.on('unlink', onChange)
-    },
-  }
+            const onChange = (file: string) => {
+                if (!file.startsWith(CONTENT_DIR)) return
+                try {
+                    content = readContent()
+                    server.config.logger.info('content rebuilt', { timestamp: true })
+                    server.ws.send({ type: 'full-reload' })
+                } catch (error) {
+                    server.config.logger.error(`content rebuild failed: ${String(error)}`)
+                }
+            }
+            server.watcher.on('change', onChange)
+            server.watcher.on('add', onChange)
+            server.watcher.on('unlink', onChange)
+        },
+    }
 }

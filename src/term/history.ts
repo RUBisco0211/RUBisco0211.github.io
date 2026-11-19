@@ -14,25 +14,25 @@ const NAME = 'history'
 const LEGACY_KEY = 'history'
 
 export class SiteHistory extends History {
-  override saveToLocalStorage(): void {
-    writeStored(NAME, JSON.stringify(this.entries))
-  }
-
-  override restoreFromLocalStorage(): void {
-    const raw = readStored(NAME) ?? takeLegacy(LEGACY_KEY)
-    if (raw === null) return
-
-    try {
-      const parsed: unknown = JSON.parse(raw)
-      if (!Array.isArray(parsed) || parsed.some((item) => typeof item !== 'string')) {
-        this.entries = []
-        writeStored(NAME, '[]')
-        return
-      }
-      this.entries = parsed
-    } catch {
-      this.entries = []
-      writeStored(NAME, '[]')
+    override saveToLocalStorage(): void {
+        writeStored(NAME, JSON.stringify(this.entries))
     }
-  }
+
+    override restoreFromLocalStorage(): void {
+        const raw = readStored(NAME) ?? takeLegacy(LEGACY_KEY)
+        if (raw === null) return
+
+        try {
+            const parsed: unknown = JSON.parse(raw)
+            if (!Array.isArray(parsed) || parsed.some((item) => typeof item !== 'string')) {
+                this.entries = []
+                writeStored(NAME, '[]')
+                return
+            }
+            this.entries = parsed
+        } catch {
+            this.entries = []
+            writeStored(NAME, '[]')
+        }
+    }
 }

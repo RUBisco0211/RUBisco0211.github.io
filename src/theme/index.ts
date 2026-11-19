@@ -12,9 +12,7 @@ export { catppuccin, dracula, github, gruvbox, kanagawa, tokyo }
 /** 顺序即 `theme` 命令里的列出顺序 */
 export const themes: readonly Theme[] = [tokyo, catppuccin, kanagawa, gruvbox, dracula, github]
 
-export const defaultThemeName = 'tokyo'
-
 export function findTheme(name: string): Theme | undefined {
-  const key = name.trim().toLowerCase()
-  return themes.find((theme) => theme.name === key)
+    const key = name.trim().toLowerCase()
+    return themes.find((theme) => theme.name === key)
 }

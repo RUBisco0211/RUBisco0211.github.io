@@ -2,15 +2,15 @@ import type { ITheme } from '@xterm/xterm'
 
 /** 给 DOM 层用的调色板。xterm 的 ITheme 只能喂给 xterm，CSS 读不到 */
 export interface ThemeCss {
-  readonly muted: string
-  readonly accent: string
+    readonly muted: string
+    readonly accent: string
 }
 
 /** 一个主题在某个明暗模式下的具体配色 */
 export interface Palette {
-  readonly pageBg: string
-  readonly css: ThemeCss
-  readonly xterm: ITheme
+    readonly pageBg: string
+    readonly css: ThemeCss
+    readonly xterm: ITheme
 }
 
 /**
@@ -20,7 +20,7 @@ export interface Palette {
  * 系统变了会自动跟着换。
  */
 export interface Theme {
-  readonly name: string
-  readonly light: Palette
-  readonly dark: Palette
+    readonly name: string
+    readonly light: Palette
+    readonly dark: Palette
 }

@@ -16,12 +16,12 @@ export type { DocKind, DocMeta }
 
 /** 文件系统里的一个条目：元数据 + 由 slug 最后一段推出的名字 */
 export interface FileEntry extends DocMeta {
-  readonly name: string
+    readonly name: string
 }
 
 export interface FsNode {
-  readonly dirs: readonly string[]
-  readonly files: readonly FileEntry[]
+    readonly dirs: readonly string[]
+    readonly files: readonly FileEntry[]
 }
 
 export type Fs = ReadonlyMap<string, FsNode>
@@ -29,82 +29,83 @@ export type Fs = ReadonlyMap<string, FsNode>
 const collator = new Intl.Collator('zh-Hans-CN', { numeric: true, sensitivity: 'base' })
 
 export function buildFs(docs: readonly DocMeta[]): Fs {
-  const draft = new Map<string, { dirs: Set<string>; files: FileEntry[] }>()
+    const draft = new Map<string, { dirs: Set<string>; files: FileEntry[] }>()
 
-  const node = (path: string) => {
-    let found = draft.get(path)
-    if (!found) {
-      found = { dirs: new Set(), files: [] }
-      draft.set(path, found)
-    }
-    return found
-  }
-
-  node('/')
-
-  for (const doc of docs) {
-    const abs = normalize(`/${doc.slug}`)
-    const { dir, base } = splitPath(abs)
-    if (base === '') continue
-
-    // 逐级补出祖先目录，'/' 也要登记
-    let cur = ''
-    for (const seg of dir.split('/').filter(Boolean)) {
-      node(cur === '' ? '/' : cur).dirs.add(seg)
-      cur = `${cur}/${seg}`
-      node(cur)
+    const node = (path: string) => {
+        let found = draft.get(path)
+        if (!found) {
+            found = { dirs: new Set(), files: [] }
+            draft.set(path, found)
+        }
+        return found
     }
 
-    node(dir).files.push({ ...doc, name: base })
-  }
+    node('/')
 
-  const fs = new Map<string, FsNode>()
-  for (const [path, entry] of draft) {
-    fs.set(path, {
-      dirs: [...entry.dirs].sort(collator.compare),
-      files: entry.files.sort((a, b) => collator.compare(a.name, b.name)),
-    })
-  }
-  return fs
+    for (const doc of docs) {
+        const abs = normalize(`/${doc.slug}`)
+        const { dir, base } = splitPath(abs)
+        if (base === '') continue
+
+        // 逐级补出祖先目录，'/' 也要登记
+        let cur = ''
+        for (const seg of dir.split('/').filter(Boolean)) {
+            node(cur === '' ? '/' : cur).dirs.add(seg)
+            cur = `${cur}/${seg}`
+            node(cur)
+        }
+
+        node(dir).files.push({ ...doc, name: base })
+    }
+
+    const fs = new Map<string, FsNode>()
+    for (const [path, entry] of draft) {
+        fs.set(path, {
+            dirs: [...entry.dirs].sort(collator.compare),
+            files: entry.files.sort((a, b) => collator.compare(a.name, b.name)),
+        })
+    }
+    return fs
 }
 
 export function getNode(fs: Fs, abs: string): FsNode | undefined {
-  return fs.get(normalize(abs))
+    return fs.get(normalize(abs))
 }
 
 export function isDir(fs: Fs, abs: string): boolean {
-  return fs.has(normalize(abs))
+    return fs.has(normalize(abs))
 }
 
 export function findFile(fs: Fs, abs: string): FileEntry | undefined {
-  const { dir, base } = splitPath(abs)
-  return fs.get(dir)?.files.find((file) => file.name === base)
+    const { dir, base } = splitPath(abs)
+    return fs.get(dir)?.files.find((file) => file.name === base)
 }
 
 export function allFiles(fs: Fs): FileEntry[] {
-  return [...fs.values()].flatMap((node) => node.files)
+    return [...fs.values()].flatMap((node) => node.files)
 }
 
 export type Target =
-  | { kind: 'dir'; path: string; node: FsNode }
-  | { kind: 'file'; path: string; file: FileEntry }
-  | { kind: 'missing'; path: string }
+    | { kind: 'dir'; path: string; node: FsNode }
+    | { kind: 'file'; path: string; file: FileEntry }
+    | { kind: 'missing'; path: string }
 
 /**
  * 把「相对 cwd 的用户输入」解析成一个存在的目标。
  * 顺带接受带扩展名的写法：cat hello.md 等价于 cat hello。
  */
 export function lookup(fs: Fs, cwd: string, arg: string): Target {
-  const path = resolvePath(cwd, arg)
-  return (
-    lookupAbs(fs, path) ?? lookupAbs(fs, path.replace(/\.mdx?$/, '')) ?? { kind: 'missing', path }
-  )
+    const path = resolvePath(cwd, arg)
+    return (
+        lookupAbs(fs, path) ??
+        lookupAbs(fs, path.replace(/\.mdx?$/, '')) ?? { kind: 'missing', path }
+    )
 }
 
 function lookupAbs(fs: Fs, path: string): Target | undefined {
-  const node = fs.get(path)
-  if (node) return { kind: 'dir', path, node }
-  const file = findFile(fs, path)
-  if (file) return { kind: 'file', path, file }
-  return undefined
+    const node = fs.get(path)
+    if (node) return { kind: 'dir', path, node }
+    const file = findFile(fs, path)
+    if (file) return { kind: 'file', path, file }
+    return undefined
 }

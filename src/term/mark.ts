@@ -14,62 +14,62 @@ const INVERSE_OFF = '\x1b[27m'
 
 /** 可见文本 + 每个可见字符对应的原始下标 */
 function splitAnsi(line: string): { plain: string; map: number[] } {
-  let plain = ''
-  const map: number[] = []
-  let index = 0
+    let plain = ''
+    const map: number[] = []
+    let index = 0
 
-  while (index < line.length) {
-    ESCAPE.lastIndex = index
-    const escape = ESCAPE.exec(line)
-    if (escape) {
-      index += escape[0].length
-      continue
+    while (index < line.length) {
+        ESCAPE.lastIndex = index
+        const escape = ESCAPE.exec(line)
+        if (escape) {
+            index += escape[0].length
+            continue
+        }
+
+        const char = String.fromCodePoint(line.codePointAt(index) ?? 0)
+        plain += char
+        map.push(index)
+        index += char.length
     }
 
-    const char = String.fromCodePoint(line.codePointAt(index) ?? 0)
-    plain += char
-    map.push(index)
-    index += char.length
-  }
-
-  return { plain, map }
+    return { plain, map }
 }
 
 /** 把所有 query（忽略大小写）反显。query 为空时原样返回。 */
 export function markMatches(line: string, query: string): string {
-  const needle = query.trim()
-  if (needle === '') return line
+    const needle = query.trim()
+    if (needle === '') return line
 
-  const { plain, map } = splitAnsi(line)
-  const haystack = plain.toLowerCase()
-  const target = needle.toLowerCase()
+    const { plain, map } = splitAnsi(line)
+    const haystack = plain.toLowerCase()
+    const target = needle.toLowerCase()
 
-  const parts: string[] = []
-  let raw = 0
-  let from = 0
+    const parts: string[] = []
+    let raw = 0
+    let from = 0
 
-  for (;;) {
-    const at = haystack.indexOf(target, from)
-    if (at === -1) break
+    for (;;) {
+        const at = haystack.indexOf(target, from)
+        if (at === -1) break
 
-    const start = map[at]
-    if (start === undefined) break
+        const start = map[at]
+        if (start === undefined) break
 
-    const endAt = at + target.length
-    const end = endAt < map.length ? map[endAt]! : line.length
+        const endAt = at + target.length
+        const end = endAt < map.length ? map[endAt]! : line.length
 
-    parts.push(line.slice(raw, start), INVERSE_ON, line.slice(start, end), INVERSE_OFF)
-    raw = end
-    from = endAt
-  }
+        parts.push(line.slice(raw, start), INVERSE_ON, line.slice(start, end), INVERSE_OFF)
+        raw = end
+        from = endAt
+    }
 
-  parts.push(line.slice(raw))
-  return parts.join('')
+    parts.push(line.slice(raw))
+    return parts.join('')
 }
 
 /** 这行是否命中（用于统计匹配行） */
 export function matchesQuery(line: string, query: string): boolean {
-  const needle = query.trim().toLowerCase()
-  if (needle === '') return false
-  return stripAnsi(line).toLowerCase().includes(needle)
+    const needle = query.trim().toLowerCase()
+    if (needle === '') return false
+    return stripAnsi(line).toLowerCase().includes(needle)
 }

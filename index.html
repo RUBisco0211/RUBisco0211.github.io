@@ -1,74 +1,74 @@
 <!doctype html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>rubisco@tty.blog</title>
-    <meta
-      name="description"
-      content="一个用命令浏览的个人站点：ls 看目录、cat 读文章、search 全站搜索，一切都在终端里。"
-    />
-    <meta name="theme-color" content="#1a1b26" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#e1e2e7" media="(prefers-color-scheme: light)" />
-    <meta property="og:title" content="rubisco@tty.blog" />
-    <meta
-      property="og:description"
-      content="一个用命令浏览的个人站点：ls 看目录、cat 读文章、search 全站搜索。"
-    />
-    <meta property="og:type" content="website" />
-    <script>
-      // 上一次用到的主题底色，让占位页跟实际主题一致（而不是写死的默认色）。
-      // 首次访问没有记录，就落到下面媒体查询的默认值上。
-      try {
-        const bg = localStorage.getItem('tty.blog:bg')
-        const fg = localStorage.getItem('tty.blog:muted')
-        if (bg) document.documentElement.style.setProperty('--boot-bg', bg)
-        if (fg) document.documentElement.style.setProperty('--boot-fg', fg)
-      } catch {}
-    </script>
-    <style>
-      /* 内联样式，保证首屏不出现无样式内容（styles.css 是另一个请求） */
-      /* JS 和 CSS 都还没到位时的底色。主题的深浅跟随系统，这里也一样 */
-      :root {
-        color-scheme: dark;
-        --boot-bg: #1a1b26;
-        --boot-fg: #565f89;
-      }
-      @media (prefers-color-scheme: light) {
-        :root {
-          color-scheme: light;
-          --boot-bg: #e1e2e7;
-          --boot-fg: #6172b0;
-        }
-      }
-      #boot {
-        position: fixed;
-        inset: 0;
-        z-index: 1;
-        display: grid;
-        place-items: center;
-        background: var(--boot-bg);
-        color: var(--boot-fg);
-        font:
-          14px/1.6 ui-monospace,
-          SFMono-Regular,
-          Menlo,
-          monospace;
-      }
-      #boot p {
-        margin: 0;
-      }
-    </style>
-  </head>
-  <body>
-    <!-- 终端挂载后由 main.ts 移除 -->
-    <div id="boot"><p>tty.blog · 加载中…</p></div>
-    <div id="app">
-      <!-- 终端必须有独立的、无内边距的父元素：FitAddon 读的是父元素的
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <title>rubisco@tty.blog</title>
+        <meta
+            name="description"
+            content="一个用命令浏览的个人站点：ls 看目录、cat 读文章、search 全站搜索，一切都在终端里。"
+        />
+        <meta name="theme-color" content="#1a1b26" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#e1e2e7" media="(prefers-color-scheme: light)" />
+        <meta property="og:title" content="rubisco@tty.blog" />
+        <meta
+            property="og:description"
+            content="一个用命令浏览的个人站点：ls 看目录、cat 读文章、search 全站搜索。"
+        />
+        <meta property="og:type" content="website" />
+        <script>
+            // 上一次用到的主题底色，让占位页跟实际主题一致（而不是写死的默认色）。
+            // 首次访问没有记录，就落到下面媒体查询的默认值上。
+            try {
+                const bg = localStorage.getItem('tty.blog:bg')
+                const fg = localStorage.getItem('tty.blog:muted')
+                if (bg) document.documentElement.style.setProperty('--boot-bg', bg)
+                if (fg) document.documentElement.style.setProperty('--boot-fg', fg)
+            } catch {}
+        </script>
+        <style>
+            /* 内联样式，保证首屏不出现无样式内容（styles.css 是另一个请求） */
+            /* JS 和 CSS 都还没到位时的底色。主题的深浅跟随系统，这里也一样 */
+            :root {
+                color-scheme: dark;
+                --boot-bg: #1a1b26;
+                --boot-fg: #565f89;
+            }
+            @media (prefers-color-scheme: light) {
+                :root {
+                    color-scheme: light;
+                    --boot-bg: #e1e2e7;
+                    --boot-fg: #6172b0;
+                }
+            }
+            #boot {
+                position: fixed;
+                inset: 0;
+                z-index: 1;
+                display: grid;
+                place-items: center;
+                background: var(--boot-bg);
+                color: var(--boot-fg);
+                font:
+                    14px/1.6 ui-monospace,
+                    SFMono-Regular,
+                    Menlo,
+                    monospace;
+            }
+            #boot p {
+                margin: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- 终端挂载后由 main.ts 移除 -->
+        <div id="boot"><p>tty.blog · 加载中…</p></div>
+        <div id="app">
+            <!-- 终端必须有独立的、无内边距的父元素：FitAddon 读的是父元素的
            computed height，外面带 padding 会让它多算出行数，最后一行被裁掉 -->
-      <div id="term"></div>
-    </div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+            <div id="term"></div>
+        </div>
+        <script type="module" src="/src/main.ts"></script>
+    </body>
 </html>

@@ -9,9 +9,9 @@ import type { Command } from '../types.ts'
  * registry 拿到 undefined 直接崩。
  */
 const modules = import.meta.glob<{ default?: Command }>(['./*.ts', '!./index.ts'], {
-  eager: true,
+    eager: true,
 })
 
 export const commands: readonly Command[] = Object.values(modules)
-  .map((module) => module.default)
-  .filter((command): command is Command => command !== undefined)
+    .map((module) => module.default)
+    .filter((command): command is Command => command !== undefined)

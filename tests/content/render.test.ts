@@ -5,134 +5,135 @@ import { visibleWidth } from '../../src/term/width.ts'
 
 /** 去掉 ANSI 和 OSC 8，只看文字 */
 const plain = (text: string): string =>
-  text.replace(/\x1b\]8;;[^\x1b]*\x1b\\/g, '').replace(/\x1b\[[0-9;]*m/g, '')
+    text.replace(/\x1b\]8;;[^\x1b]*\x1b\\/g, '').replace(/\x1b\[[0-9;]*m/g, '')
 
 test('标题去掉 # 并加粗', () => {
-  const out = renderMarkdown('## 安装 fnm')
-  assert.equal(plain(out), '安装 fnm')
-  assert.match(out, /\x1b\[1m/)
-  assert.doesNotMatch(plain(out), /#/)
+    const out = renderMarkdown('## 安装 fnm')
+    assert.equal(plain(out), '安装 fnm')
+    assert.match(out, /\x1b\[1m/)
+    assert.doesNotMatch(plain(out), /#/)
 })
 
 test('列表变成符号加悬挂缩进', () => {
-  assert.equal(plain(renderMarkdown('- 第一\n- 第二')), '  • 第一\n  • 第二')
-  assert.equal(plain(renderMarkdown('1. 第一\n2. 第二')), '  1. 第一\n  2. 第二')
+    assert.equal(plain(renderMarkdown('- 第一\n- 第二')), '  • 第一\n  • 第二')
+    assert.equal(plain(renderMarkdown('1. 第一\n2. 第二')), '  1. 第一\n  2. 第二')
 })
 
 test('代码块去掉围栏', () => {
-  const out = renderMarkdown('```sh\nbrew install fnm\n```')
-  assert.equal(plain(out), 'brew install fnm')
-  assert.doesNotMatch(plain(out), /```/)
+    const out = renderMarkdown('```sh\nbrew install fnm\n```')
+    assert.equal(plain(out), 'brew install fnm')
+    assert.doesNotMatch(plain(out), /```/)
 })
 
 test('没有语言标注的代码块压暗', () => {
-  const out = renderMarkdown('```\nplain text\n```')
-  assert.match(out, /\x1b\[2mplain text\x1b\[22m/)
+    const out = renderMarkdown('```\nplain text\n```')
+    assert.match(out, /\x1b\[2mplain text\x1b\[22m/)
 })
 
 test('代码块按语言着色', () => {
-  const out = renderMarkdown('```js\nconst a = 1 // 注释\n```')
-  assert.match(out, /\x1b\[36mconst\x1b\[39m/) // 关键字青
-  assert.match(out, /\x1b\[33m1\x1b\[39m/) // 数字黄
-  assert.match(out, /\x1b\[2m\/\/ 注释\x1b\[22m/) // 注释暗
+    const out = renderMarkdown('```js\nconst a = 1 // 注释\n```')
+    assert.match(out, /\x1b\[36mconst\x1b\[39m/) // 关键字青
+    assert.match(out, /\x1b\[33m1\x1b\[39m/) // 数字黄
+    assert.match(out, /\x1b\[2m\/\/ 注释\x1b\[22m/) // 注释暗
 })
 
 test('shell 代码块识别注释、变量和选项', () => {
-  const out = renderMarkdown('```bash\nexport PATH=$HOME/bin # 说明\nls -la\n```')
-  assert.match(out, /\x1b\[36mexport\x1b\[39m/)
-  assert.match(out, /\x1b\[35m\$HOME\x1b\[39m/)
-  assert.match(out, /\x1b\[2m# 说明\x1b\[22m/)
-  assert.match(out, /\x1b\[36m -la\x1b\[39m/) // 选项按关键字上青色
+    const out = renderMarkdown('```bash\nexport PATH=$HOME/bin # 说明\nls -la\n```')
+    assert.match(out, /\x1b\[36mexport\x1b\[39m/)
+    assert.match(out, /\x1b\[35m\$HOME\x1b\[39m/)
+    assert.match(out, /\x1b\[2m# 说明\x1b\[22m/)
+    assert.match(out, /\x1b\[36m -la\x1b\[39m/) // 选项按关键字上青色
 })
 
 test('diff 代码块整行着色', () => {
-  const out = renderMarkdown('```diff\n+新增\n-删除\n@@ 1,2 @@\n```')
-  assert.match(out, /\x1b\[32m\+新增\x1b\[39m/)
-  assert.match(out, /\x1b\[31m-删除\x1b\[39m/)
-  assert.match(out, /\x1b\[35m@@ 1,2 @@\x1b\[39m/) // section 上品红
+    const out = renderMarkdown('```diff\n+新增\n-删除\n@@ 1,2 @@\n```')
+    assert.match(out, /\x1b\[32m\+新增\x1b\[39m/)
+    assert.match(out, /\x1b\[31m-删除\x1b\[39m/)
+    assert.match(out, /\x1b\[35m@@ 1,2 @@\x1b\[39m/) // section 上品红
 })
 
 test('行内代码、粗体、斜体、删除线都不留标记', () => {
-  assert.equal(plain(renderMarkdown('用 `npm` 装')), '用 npm 装')
-  assert.equal(plain(renderMarkdown('**粗** 和 *斜*')), '粗 和 斜')
-  assert.equal(plain(renderMarkdown('~~删~~')), '删')
+    assert.equal(plain(renderMarkdown('用 `npm` 装')), '用 npm 装')
+    assert.equal(plain(renderMarkdown('**粗** 和 *斜*')), '粗 和 斜')
+    assert.equal(plain(renderMarkdown('~~删~~')), '删')
 })
 
 test('链接保留文字并用 OSC 8 包起来', () => {
-  const out = renderMarkdown('见 [文档](https://example.com/doc)')
-  assert.equal(plain(out), '见 文档')
-  assert.match(out, /\x1b\]8;;https:\/\/example\.com\/doc\x1b\\/)
+    const out = renderMarkdown('见 [文档](https://example.com/doc)')
+    assert.equal(plain(out), '见 文档')
+    assert.match(out, /\x1b\]8;;https:\/\/example\.com\/doc\x1b\\/)
 })
 
 test('图片做成可点链接，没写 alt 就用文件名', () => {
-  const withAlt = renderMarkdown('![截图](./a.png)')
-  assert.equal(plain(withAlt), '[图片: 截图]')
-  assert.match(withAlt, /\x1b\]8;;\.\/a\.png\x1b\\/)
+    const withAlt = renderMarkdown('![截图](./a.png)')
+    assert.equal(plain(withAlt), '[图片: 截图]')
+    assert.match(withAlt, /\x1b\]8;;\.\/a\.png\x1b\\/)
 
-  assert.equal(plain(renderMarkdown('![](./assets/cover.png?v=2)')), '[图片: cover.png]')
+    assert.equal(plain(renderMarkdown('![](./assets/cover.png?v=2)')), '[图片: cover.png]')
 })
 
 test('引用和分隔线', () => {
-  assert.equal(plain(renderMarkdown('> 引用一句')), '│ 引用一句')
-  assert.match(plain(renderMarkdown('---')), /^─+$/)
+    assert.equal(plain(renderMarkdown('> 引用一句')), '│ 引用一句')
+    assert.match(plain(renderMarkdown('---')), /^─+$/)
 })
 
 test('嵌套列表保持层级', () => {
-  const out = plain(renderMarkdown('- 外层\n  - 内层'))
-  assert.equal(out, '  • 外层\n      • 内层')
+    const out = plain(renderMarkdown('- 外层\n  - 内层'))
+    assert.equal(out, '  • 外层\n      • 内层')
 })
 
 test('多余空行被折叠，行尾不留空白', () => {
-  const out = renderMarkdown('第一段\n\n\n\n第二段')
-  assert.equal(plain(out), '第一段\n\n第二段')
-  assert.doesNotMatch(out, /[ \t]+$/m)
+    const out = renderMarkdown('第一段\n\n\n\n第二段')
+    assert.equal(plain(out), '第一段\n\n第二段')
+    assert.doesNotMatch(out, /[ \t]+$/m)
 })
 
 test('窄终端下把列压窄、单元格折行，而不是整个退化', () => {
-  const table =
-    '| 名称 | 说明 | 默认 |\n| --- | --- | --- |\n| 超时 | 等待上传完成的最长时间 | 30000 |'
-  const rendered = plain(renderMarkdown(table, 30))
-  const rows = rendered.split('\n')
+    const table =
+        '| 名称 | 说明 | 默认 |\n| --- | --- | --- |\n| 超时 | 等待上传完成的最长时间 | 30000 |'
+    const rendered = plain(renderMarkdown(table, 30))
+    const rows = rendered.split('\n')
 
-  // 还是网格
-  assert.ok(rows.some((line) => line.includes('│')))
-  // 每行都不超过可用宽度
-  for (const row of rows) assert.ok(visibleWidth(row) <= 30, row)
-  // 长单元格被折成多行，内容没丢
-  assert.match(rendered, /等待上传完成的/)
-  assert.match(rendered, /最长时间/)
+    // 还是网格
+    assert.ok(rows.some((line) => line.includes('│')))
+    // 每行都不超过可用宽度
+    for (const row of rows) assert.ok(visibleWidth(row) <= 30, row)
+    // 长单元格被折成多行，内容没丢
+    assert.match(rendered, /等待上传完成的/)
+    assert.match(rendered, /最长时间/)
 })
 
 test('宽终端下表格画成网格', () => {
-  const table = '| a | b |\n| --- | --- |\n| 1 | 2 |'
-  const wide = plain(renderMarkdown(table, 80))
-  assert.match(wide, /a\s+│\s+b/)
-  assert.match(wide, /1\s+│\s+2/)
+    const table = '| a | b |\n| --- | --- |\n| 1 | 2 |'
+    const wide = plain(renderMarkdown(table, 80))
+    assert.match(wide, /a\s+│\s+b/)
+    assert.match(wide, /1\s+│\s+2/)
 })
 
 test('列太多压不下去时才退回竖向排布', () => {
-  const header = '| a | b | c | d | e | f |\n| --- | --- | --- | --- | --- | --- |'
-  const row = '\n| 一一一一 | 二二二二 | 三三三三 | 四四四四 | 五五五五 | 六六六六 |'
-  const narrow = plain(renderMarkdown(`${header}${row}`, 20))
-  assert.doesNotMatch(narrow, /│/)
-  assert.match(narrow, /一一一一/)
+    const header = '| a | b | c | d | e | f |\n| --- | --- | --- | --- | --- | --- |'
+    const row = '\n| 一一一一 | 二二二二 | 三三三三 | 四四四四 | 五五五五 | 六六六六 |'
+    const narrow = plain(renderMarkdown(`${header}${row}`, 20))
+    assert.doesNotMatch(narrow, /│/)
+    assert.match(narrow, /一一一一/)
 })
 
 test('width 为 0 时不限宽，表格始终画网格', () => {
-  const table = '| 名称 | 说明 |\n| --- | --- |\n| 超时 | 很长很长很长很长很长很长很长的说明文字 |'
-  assert.match(plain(renderMarkdown(table)), /│/)
+    const table =
+        '| 名称 | 说明 |\n| --- | --- |\n| 超时 | 很长很长很长很长很长很长很长的说明文字 |'
+    assert.match(plain(renderMarkdown(table)), /│/)
 })
 
 test('空文档返回空串', () => {
-  assert.equal(renderMarkdown(''), '')
-  assert.equal(renderMarkdown('\n\n'), '')
+    assert.equal(renderMarkdown(''), '')
+    assert.equal(renderMarkdown('\n\n'), '')
 })
 
 test('headingTitles 抽出所有标题的纯文本', () => {
-  assert.deepEqual(headingTitles('# 一级\n\n正文\n\n## 二级 **粗**\n\n### 三级'), [
-    '一级',
-    '二级 粗',
-    '三级',
-  ])
-  assert.deepEqual(headingTitles('只有正文'), [])
+    assert.deepEqual(headingTitles('# 一级\n\n正文\n\n## 二级 **粗**\n\n### 三级'), [
+        '一级',
+        '二级 粗',
+        '三级',
+    ])
+    assert.deepEqual(headingTitles('只有正文'), [])
 })

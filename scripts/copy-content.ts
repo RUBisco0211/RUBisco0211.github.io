@@ -13,16 +13,16 @@ const ROOT = resolve(import.meta.dirname, '..')
 const DIST = join(ROOT, 'dist')
 
 if (!existsSync(DIST)) {
-  console.error('dist/ 不存在，先跑 vite build')
-  process.exit(1)
+    console.error('dist/ 不存在，先跑 vite build')
+    process.exit(1)
 }
 
 const { docs } = readContent()
 
 for (const doc of docs) {
-  const to = join(DIST, 'content', doc.path)
-  mkdirSync(dirname(to), { recursive: true })
-  copyFileSync(join(CONTENT_DIR, doc.path), to)
+    const to = join(DIST, 'content', doc.path)
+    mkdirSync(dirname(to), { recursive: true })
+    copyFileSync(join(CONTENT_DIR, doc.path), to)
 }
 
 console.log(`content: ${docs.length} file(s) → dist/content/`)

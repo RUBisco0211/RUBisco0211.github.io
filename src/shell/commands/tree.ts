@@ -11,54 +11,54 @@ import type { Command } from '../types.ts'
  * 目录和文件各自按名字排好序（buildFs 保证的），所以这里只管缩进。
  */
 export function treeLines(fs: Fs, root: string): string[] {
-  const lines = [displayPath(root)]
+    const lines = [displayPath(root)]
 
-  const walk = (path: string, prefix: string): void => {
-    const node = getNode(fs, path)
-    if (!node) return
+    const walk = (path: string, prefix: string): void => {
+        const node = getNode(fs, path)
+        if (!node) return
 
-    const entries = [
-      ...node.dirs.map((name) => ({ name, dir: true })),
-      ...node.files.map((file) => ({ name: file.name, dir: false })),
-    ]
+        const entries = [
+            ...node.dirs.map((name) => ({ name, dir: true })),
+            ...node.files.map((file) => ({ name: file.name, dir: false })),
+        ]
 
-    entries.forEach((entry, index) => {
-      const last = index === entries.length - 1
-      const branch = last ? '└── ' : '├── '
-      const label = entry.dir ? cyan(`${entry.name}/`) : entry.name
-      lines.push(`${prefix}${branch}${label}`)
+        entries.forEach((entry, index) => {
+            const last = index === entries.length - 1
+            const branch = last ? '└── ' : '├── '
+            const label = entry.dir ? cyan(`${entry.name}/`) : entry.name
+            lines.push(`${prefix}${branch}${label}`)
 
-      if (entry.dir) {
-        walk(normalize(`${path}/${entry.name}`), `${prefix}${last ? '    ' : '│   '}`)
-      }
-    })
-  }
+            if (entry.dir) {
+                walk(normalize(`${path}/${entry.name}`), `${prefix}${last ? '    ' : '│   '}`)
+            }
+        })
+    }
 
-  walk(root, '')
-  return lines
+    walk(root, '')
+    return lines
 }
 
 const tree: Command = {
-  name: 'tree',
-  description: '树形列出目录内容',
-  usage: 'tree [路径]',
-  complete: (ctx, _argv, current) => completePath(ctx, current),
-  run(ctx, args) {
-    const target = args[0] ?? '.'
-    const found = lookup(ctx.fs, ctx.cwd, target)
+    name: 'tree',
+    description: '树形列出目录内容',
+    usage: 'tree [路径]',
+    complete: (ctx, _argv, current) => completePath(ctx, current),
+    run(ctx, args) {
+        const target = args[0] ?? '.'
+        const found = lookup(ctx.fs, ctx.cwd, target)
 
-    if (found.kind === 'missing') {
-      ctx.term.println(red(`没有这个路径：${target}`))
-      return
-    }
+        if (found.kind === 'missing') {
+            ctx.term.println(red(`没有这个路径：${target}`))
+            return
+        }
 
-    if (found.kind === 'file') {
-      ctx.term.println(found.file.name)
-      return
-    }
+        if (found.kind === 'file') {
+            ctx.term.println(found.file.name)
+            return
+        }
 
-    for (const line of treeLines(ctx.fs, found.path)) ctx.term.println(line)
-  },
+        for (const line of treeLines(ctx.fs, found.path)) ctx.term.println(line)
+    },
 }
 
 export default tree

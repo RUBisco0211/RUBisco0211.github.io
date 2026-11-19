@@ -15,14 +15,14 @@
 const ESC = '\x1b'
 
 export interface Style {
-  (text: string): string
-  readonly open: string
-  readonly close: string
+    (text: string): string
+    readonly open: string
+    readonly close: string
 }
 
 function makeStyle(open: string, close: string): Style {
-  const fn = (text: string): string => open + text + close
-  return Object.assign(fn, { open, close })
+    const fn = (text: string): string => open + text + close
+    return Object.assign(fn, { open, close })
 }
 
 /**
@@ -30,7 +30,7 @@ function makeStyle(open: string, close: string): Style {
  * 注意它是零宽的：visibleWidth() 会忽略这层包裹，对齐不受影响。
  */
 export function hyperlink(href: string, text: string): string {
-  return `\x1b]8;;${href}\x1b\\${text}\x1b]8;;\x1b\\`
+    return `\x1b]8;;${href}\x1b\\${text}\x1b]8;;\x1b\\`
 }
 
 // —— 字重与装饰 ——
@@ -70,17 +70,17 @@ export const bgWhite = makeStyle(`${ESC}[47m`, `${ESC}[49m`)
 
 // —— 256 色 / 真彩色（主题 palette 覆盖不到时用） ——
 export function fg256(code: number): Style {
-  return makeStyle(`${ESC}[38;5;${code}m`, `${ESC}[39m`)
+    return makeStyle(`${ESC}[38;5;${code}m`, `${ESC}[39m`)
 }
 
 export function bg256(code: number): Style {
-  return makeStyle(`${ESC}[48;5;${code}m`, `${ESC}[49m`)
+    return makeStyle(`${ESC}[48;5;${code}m`, `${ESC}[49m`)
 }
 
 export function rgb(r: number, g: number, b: number): Style {
-  return makeStyle(`${ESC}[38;2;${r};${g};${b}m`, `${ESC}[39m`)
+    return makeStyle(`${ESC}[38;2;${r};${g};${b}m`, `${ESC}[39m`)
 }
 
 export function bgRgb(r: number, g: number, b: number): Style {
-  return makeStyle(`${ESC}[48;2;${r};${g};${b}m`, `${ESC}[49m`)
+    return makeStyle(`${ESC}[48;2;${r};${g};${b}m`, `${ESC}[49m`)
 }
