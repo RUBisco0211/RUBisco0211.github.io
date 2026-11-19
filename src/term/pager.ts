@@ -98,25 +98,42 @@ export function locateTitles(lines: readonly string[], titles: readonly string[]
   return found
 }
 
-/** 底部状态栏：左边标题，右边进度和提示，整行反显 */
-export function pagerStatus(
-  title: string,
-  offset: number,
-  total: number,
-  height: number,
-  cols: number,
-  extra = '',
-  hint = 'q 退出',
-): string {
+export interface StatusOptions {
+  readonly title: string
+  readonly offset: number
+  readonly total: number
+  readonly height: number
+  readonly cols: number
+  /** 进度前面附加的状态（比如搜索关键字和匹配数） */
+  readonly extra?: string
+  /** 操作提示，**按重要性从低到高**排列：放不下时从头部丢，最后一个留到最后 */
+  readonly hints?: readonly string[]
+}
+
+/** 底部状态栏：左边标题，右边进度和操作提示，整行反显 */
+export function pagerStatus(options: StatusOptions): string {
+  const { title, offset, total, height, cols } = options
   const percent = Math.min(
     100,
     total <= height ? 100 : Math.round(((offset + height) / total) * 100),
   )
   const position = `${offset + 1}-${Math.min(offset + height, total)}/${total}`
-  const right = [extra, `${percent}%  ·  ${position}`, hint].filter(Boolean).join('  ·  ')
+
+  // 默认至少留一条退出的提示
+  const hints = [...(options.hints ?? ['q 退出'])]
+  const buildRight = (): string =>
+    [options.extra, `${percent}%  ·  ${position}`, ...hints].filter(Boolean).join('  ·  ')
+
+  // 挤不下就先丢最不重要的提示，最后才截断标题
   const gap = 2
+  while (hints.length > 1 && visibleWidth(title) + gap + visibleWidth(buildRight()) > cols) {
+    hints.shift()
+  }
+
+  const right = buildRight()
   const room = Math.max(0, cols - visibleWidth(right) - gap)
   const left = truncateTo(title, room)
+
   return inverse(
     padEnd(padEnd(`${left}${' '.repeat(gap)}`, cols - visibleWidth(right)) + right, cols),
   )
@@ -205,15 +222,14 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
   const statusLine = (): string => {
     if (mode === 'search') return inverse(padEnd(`/${typing}`, cols))
     if (mode === 'outline') {
-      return pagerStatus(
-        `${input.title} · 目录`,
-        outlineCursor,
-        Math.max(1, titles.length),
-        1,
+      return pagerStatus({
+        title: `${input.title} · 目录`,
+        offset: outlineCursor,
+        total: Math.max(1, titles.length),
+        height: 1,
         cols,
-        '',
-        '↑↓ 选择  Enter 跳转  Esc 取消',
-      )
+        hints: ['↑↓ 选择', 'Enter 跳转', 'Esc 取消'],
+      })
     }
     const extra =
       query === ''
@@ -221,7 +237,21 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
         : matches.length === 0
           ? `/${query} 无匹配`
           : `/${query} ${matchIndex + 1}/${matches.length}`
-    return pagerStatus(input.title, offset, lines.length, height, cols, extra)
+
+    // 从低到高：窄终端会先丢掉前面几个
+    const hints = ['j/k 行', '空格 翻页']
+    if (titles.length > 0) hints.push('t 目录')
+    hints.push('/ 搜索', 'q 退出')
+
+    return pagerStatus({
+      title: input.title,
+      offset,
+      total: lines.length,
+      height,
+      cols,
+      extra,
+      hints,
+    })
   }
 
   const draw = (): void => {

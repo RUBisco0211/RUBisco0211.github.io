@@ -53,7 +53,13 @@ test('滚轮累积：攒够一行才滚', () => {
 })
 
 test('状态栏整行铺满且反显', () => {
-  const status = pagerStatus('从nvm迁移到fnm', 0, 100, 10, 60)
+  const status = pagerStatus({
+    title: '从nvm迁移到fnm',
+    offset: 0,
+    total: 100,
+    height: 10,
+    cols: 60,
+  })
   assert.equal(visibleWidth(status), 60)
   assert.match(status, /^\x1b\[7m/)
   assert.match(status, /\x1b\[27m$/)
@@ -62,24 +68,56 @@ test('状态栏整行铺满且反显', () => {
 })
 
 test('状态栏显示百分比和行范围', () => {
-  const status = plain(pagerStatus('t', 0, 100, 10, 80))
+  const status = plain(pagerStatus({ title: 't', offset: 0, total: 100, height: 10, cols: 80 }))
   assert.match(status, /10%/)
   assert.match(status, /1-10\/100/)
 
-  const end = plain(pagerStatus('t', 90, 100, 10, 80))
+  const end = plain(pagerStatus({ title: 't', offset: 90, total: 100, height: 10, cols: 80 }))
   assert.match(end, /100%/)
   assert.match(end, /91-100\/100/)
 })
 
 test('内容不足一屏时算 100%', () => {
-  assert.match(plain(pagerStatus('t', 0, 3, 10, 60)), /100%/)
+  assert.match(
+    plain(pagerStatus({ title: 't', offset: 0, total: 3, height: 10, cols: 60 })),
+    /100%/,
+  )
 })
 
 test('标题太长时截断，不挤掉右边的进度', () => {
-  const status = pagerStatus('很长'.repeat(40), 0, 100, 10, 40)
+  const status = pagerStatus({
+    title: '很长'.repeat(40),
+    offset: 0,
+    total: 100,
+    height: 10,
+    cols: 40,
+  })
   assert.equal(visibleWidth(status), 40)
   assert.match(plain(status), /…/)
-  assert.match(plain(status), /q 退出/)
+  assert.match(plain(status), /10%/)
+})
+
+test('提示放不下时从最不重要的开始丢，q 退出留到最后', () => {
+  const hints = ['j/k 行', '空格 翻页', 't 目录', '/ 搜索', 'q 退出']
+  const wide = plain(
+    pagerStatus({ title: '标题', offset: 0, total: 100, height: 10, cols: 120, hints }),
+  )
+  assert.match(wide, /j\/k 行/)
+  assert.match(wide, /q 退出/)
+
+  // 窄下来先丢 j/k 行，再丢空格翻页
+  const narrow = plain(
+    pagerStatus({ title: '标题', offset: 0, total: 100, height: 10, cols: 52, hints }),
+  )
+  assert.doesNotMatch(narrow, /j\/k 行/)
+  assert.match(narrow, /q 退出/)
+
+  // 更窄只剩最后一个
+  const tiny = plain(
+    pagerStatus({ title: '标题', offset: 0, total: 100, height: 10, cols: 34, hints }),
+  )
+  assert.match(tiny, /q 退出/)
+  assert.doesNotMatch(tiny, /t 目录/)
 })
 
 test('locateTitles 把标题映射到行号，重复标题各自对上', () => {
