@@ -15,6 +15,7 @@
 | **Vite**                  | dev server + 插件（内容编译）+ 打包                                                             |
 | **无框架**                | 状态是「REPL 循环 + 只读文件系统」，不是派生 UI。React 在这里只增加协调开销                     |
 | **原生 CSS 变量**         | 主题切换只是换几个 CSS 变量，页面里没有别的 DOM 层要同步                                        |
+| **GitHub Pages Actions**  | 用户页挂在根路径，`base` 不用动；push 到 main 自动部署                                          |
 
 ## 目录
 
@@ -112,6 +113,26 @@ aliases: {
 - 内部一律用绝对路径；显示给用户才用 `displayPath()` 转成 `~/blog`
 - 命令接受相对路径、`~`、`..`，以及带 `.md` 后缀的写法
 
+### 7. TUI 组件：pager 和 select
+
+两个都走同一套模式：**alternate screen**（`\x1b[?1049h` / `l`）+ `Term.captureKeys()` 全量接管键盘 +
+逐行 `\x1b[{row};1H\x1b[2K` 重绘 + `onResize` 重排（alt buffer 不 reflow，尺寸变了必须整屏重来）。
+
+- `term/pager.ts` 整屏阅读器：搜索（`/` 后 `n`/`N`）、目录跳转（`t`）、滚轮、翻页
+- `term/select.ts` 通用单选列表：`theme` 和 `history` 用，支持 `filterable` 的输入筛选
+
+命令里 `await` 它们，所以占用期间 shell 不会去调 `term.read()`——两者天然互斥，shell 不用改。
+
+`pagerStatus()` 的操作提示按**重要性从低到高**排列，放不下时从头部丢，`q 退出` 留到最后。
+
+### 8. 命令行着色
+
+用 `xterm-readline` 官方的 `Highlighter` 接口（`Term.setLineHighlighter`），它每次重绘会把
+`highlightPrompt(prompt) + highlight(line, pos)` 拼起来，光标位置按**未着色**的原始行算。
+
+所以 `highlightLine()` 只能往字符之间插样式，**绝不能增删字符**（测试里有断言：去色后必须和原行逐字符一致）。
+认得的命令青、别名品红、不认识的红、选项黄、引号内容绿；参数一律默认色。
+
 ## 开发
 
 ```bash
@@ -124,6 +145,25 @@ npm run format        # prettier
 
 测试用 `node --test` 而非 vitest/tsx：Node 26 原生支持类型剥离，零依赖。
 因此**所有相对 import 必须带 `.ts` 扩展名**（tsconfig 开了 `allowImportingTsExtensions`）。
+
+## 部署
+
+线上：<https://rubisco0211.github.io/>，仓库 `RUBisco0211/RUBisco0211.github.io`（GitHub Pages **用户页**）。
+
+```bash
+git push            # 推到 main 就自动部署
+```
+
+`.github/workflows/deploy.yml`：`npm ci → test → build → upload-pages-artifact → deploy-pages`。
+Pages 的 `build_type` 必须是 `workflow`（不是 `legacy`，那是 Jekyll 分支构建）：
+
+```bash
+gh api -X PUT repos/RUBisco0211/RUBisco0211.github.io/pages -f build_type=workflow
+```
+
+**`base` 路径**：用户页是根路径，`vite.config.ts` 保持默认 `/`。
+如果改成**项目页**（`<user>.github.io/<repo>`），必须设 `base: '/<repo>/'` —— 正文和静态资源都靠
+`import.meta.env.BASE_URL` 拼地址，`scripts/copy-content.ts` 写的 `dist/content/` 也在同一个前缀下。
 
 ## 容易踩的坑
 
@@ -148,10 +188,20 @@ npm run format        # prettier
 6. **`clear` 的时机**
    `xterm.clear()` 会让 readline 的 `promptMarker` 失效，只能在两次 `read()` 之间调用。
 
+7. **回车后命令行不带颜色**
+   readline 提交前会调 `State.refreshUnhighlighted()` 把这行重绘成无样式。试过覆盖它让颜色保留，
+   但那是改库的内部行为，权衡后撤掉了（`tests/term/readline.test.mjs` 里那条用例记录着默认行为）。
+
+8. **定时器要清干净**
+   `matrix` 和 pager 的 resize 防抖都用 `setTimeout`。退出路径必须 `clearTimeout` + 摘掉
+   `captureKeys`/`onResize` 的监听，否则退出后还在往终端写东西。用裸 `setTimeout` 而不是
+   `window.setTimeout`——测试在 node 里跑，`window` 不存在。
+
 ## 明确不做的事
 
-- **管道 / 重定向 / 退出码**：没有进程模型，不做
+- **管道 / 重定向 / 退出码**：没有进程模型，不做（用 `search` 代替 `cat | grep`）
 - **构建期生成正文副本**：全站只保留 `content/` 一份内容
 - **自己写 tokenizer / 行编辑器**：有现成库就用现成的
 - **SEO 预渲染**：暂时不做。真要做，成本是「每篇生成静态 HTML + sitemap」，`content/` 里的 `.md` 已经是完整真相源
-- **全屏 markdown 阅读器**：`cat` 直接输出渲染后的 ANSI，不做 DOM overlay
+- **DOM overlay 阅读器**：`cat` 走 ANSI 整屏 pager。之前做过一版 DOM overlay，删掉了——两套渲染管线会漂移
+- **移动端适配**：字符网格在小屏上没有可用性，不考虑
