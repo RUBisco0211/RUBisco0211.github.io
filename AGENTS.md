@@ -1,0 +1,156 @@
+# AGENTS.md
+
+终端风格的纯静态个人站点。没有导航栏、没有卡片列表，访客通过命令浏览内容。
+
+这份文档记录**已经定下来的架构决策**。改动前先读，尤其是「核心契约」和「容易踩的坑」两节。
+
+## 技术栈与理由
+
+| 选型                      | 理由                                                                                            |
+| ------------------------- | ----------------------------------------------------------------------------------------------- |
+| **xterm.js**              | 要的是字符网格 + ANSI + scrollback。不用它就得自己实现渲染循环                                  |
+| **xterm-readline**        | 行编辑器（回显、光标、多行折行、CJK 宽度）不要自己写。它缺 Tab 补全，我们自己补                 |
+| **marked**                | 只要 token 树，不要 HTML。markdown-it 是 HTML 渲染器，产出的 `<p>` 还得再剥一遍                 |
+| **@speed-highlight/core** | 内置终端 ANSI 输出，零依赖，1.5KB 核心 + 1KB/语言。highlight.js 只出 HTML，cli-highlight 已停更 |
+| **Vite**                  | dev server + 插件（内容编译）+ 打包                                                             |
+| **无框架**                | 状态是「REPL 循环 + 只读文件系统」，不是派生 UI。React 在这里只增加协调开销                     |
+| **原生 CSS 变量**         | 主题切换只是换几个 CSS 变量，页面里没有别的 DOM 层要同步                                        |
+
+## 目录
+
+```
+content/              内容源文件，路径即身份（slug）
+  blog/<slug>/index.md
+  projects/<slug>/index.md
+public/               静态资源
+src/
+  main.ts             装配 + REPL 循环
+  config.ts           站点配置：user/host/字体/主题/alias
+  storage.ts          localStorage 唯一入口（统一前缀）
+  term/               xterm 封装、ANSI 原语、显示宽度、命令历史
+  shell/              tokenize / alias / registry / fs / path / complete
+    commands/         一个文件一条命令，自动注册
+  content/            内容树视图、markdown→ANSI 渲染、语法着色、搜索
+  theme/              themes/<名字>.ts（每套含 light/dark 两个变体）+ 聚合 + store
+plugins/site-content.ts   content/ → virtual:site-tree
+scripts/
+  build-content.ts   编译器（纯 node，可独立跑）
+  copy-content.ts    构建后把 .md 拷进 dist/content/
+tests/                node --test，和 src 分开存放
+```
+
+## 核心契约
+
+### 1. 内容管线
+
+```
+content/**.md ──[编译]──┬──▶ virtual:site-tree    元数据内联进 bundle
+                        └──▶ dist/content/<path>  正文原样拷贝，运行时 fetch
+```
+
+- **元数据**（title/date/tags/chars/kind/meta）走虚拟模块，首屏就要用
+- **正文**按 `doc.path` fetch 原始 `.md`，运行时用 `stripFrontmatter()` 去掉开头的 `---` 块
+- **不存在第二份内容**。dev 下由 Vite 插件中间件读磁盘，build 后由 `copy-content.ts` 原样拷
+- 只有 `content/` 一份真相源。**不要**在构建期生成改写过内容的中间产物
+
+### 2. 命令契约
+
+```ts
+interface Command {
+  name: string
+  description: string
+  usage?: string
+  complete?(ctx, argv, current): Completion[]
+  run(ctx, args): void | Promise<void>
+}
+
+interface Ctx {
+  term
+  theme
+  config
+  fs
+  content
+  registry
+  cwd: string // getter，永远反映 shell 当前目录
+  chdir(target): string | null // 成功 null，失败返回错误消息
+}
+```
+
+- 命令**只依赖 `Ctx`**，不 import xterm、不 import 具体 store
+- 输出一律走 `ctx.term.println()`。`ctx.term.write()` 是裸写，不经过 readline 记账，只在确定不和输入行打架时用
+- 参数不足用 `printUsage(ctx, command)`，不要硬编码 `用法：…`（会和 `usage` 字段漂移）
+- 错误：`throw` 由 `main.ts` 捕获染红，没有退出码（没有管道，没人消费）
+
+### 3. 命令自动注册
+
+`src/shell/commands/index.ts` 用 `import.meta.glob(['./*.ts', '!./index.ts'])` 收集。
+新增命令 = 丢一个文件进 `commands/`，默认导出一个 `Command`。别处零改动。
+
+### 4. alias 是单层纯 token 替换
+
+```ts
+aliases: {
+  posts: 'ls blog'
+}
+```
+
+- 按 token 拆，不是字符串拼接，所以引号可用
+- **只展开一层**，目标本身是别名也不会继续展开
+- 不支持 `$1` 占位符——一旦支持就是在发明脚本语言
+- 配置在 `src/config.ts`，会出现在 `help` 底部和 Tab 补全里
+
+### 5. localStorage 统一前缀
+
+所有 key 必须经过 `src/storage.ts`，前缀 `tty.blog:`。
+
+**坑**：`xterm-readline` 内部把历史写进裸 key `"history"`。我们用 `SiteHistory` 继承它的 `History`，只覆盖两个存储方法，并把旧数据迁移过来。
+
+### 6. 路径与虚拟文件系统
+
+- slug 就是路径：`blog/从nvm迁移到fnm` → `/blog/从nvm迁移到fnm`
+- 目录结构由 slug 推导（`buildFs`），内容想嵌套不用改代码
+- 内部一律用绝对路径；显示给用户才用 `displayPath()` 转成 `~/blog`
+- 命令接受相对路径、`~`、`..`，以及带 `.md` 后缀的写法
+
+## 开发
+
+```bash
+npm run dev           # vite，改 content/ 会整页 reload
+npm test              # node --test，直接跑 TS（Node 原生类型剥离）
+npm run typecheck     # tsc --noEmit
+npm run build         # tsc + vite build + copy-content
+npm run format        # prettier
+```
+
+测试用 `node --test` 而非 vitest/tsx：Node 26 原生支持类型剥离，零依赖。
+因此**所有相对 import 必须带 `.ts` 扩展名**（tsconfig 开了 `allowImportingTsExtensions`）。
+
+## 容易踩的坑
+
+1. **readline 的私有 API**
+   `Term.showCompletions()` 用的是 `printPrompt` + `state.reanchor`（没有公开的「打印并重绘」接口）。
+   `tests/term/readline-completions.test.mjs` 里有一份同样的调用序列——它是**副本**，改 `terminal.ts` 时必须手动同步，否则测试全绿但行为已坏（已经发生过一次）。
+
+2. **FitAddon 读的是父元素的 computed `height`**
+   它只扣掉 `.xterm` 自己的 padding，**不管父元素的 padding**。所以终端必须放在无内边距的 `#term` 里，留白由外层 `#app` 负责。否则会多算出行数，最后一行被裁掉。
+
+3. **字体是异步的**
+   首帧用回退字体算出的行高偏小，真字体到位后单元格变高，屏幕会超出容器。所以 `Term` 在 `document.fonts.ready` 和 `loadingdone` 时都要重新 `fit()`。
+
+4. **prettier 必须跑**
+   `terminal.ts` 曾被编辑器改成双引号 + 分号，导致脚本替换静默失败、改动没生效。
+   `.prettierrc` 已定死：无分号、单引号、printWidth 100。`content/` 不在格式化范围内（手写内容）。
+
+5. **CJK 对齐要用 `visibleWidth()`**
+   按 `text.length` 算会把中文和 ANSI 转义序列一起算错。对齐用 `padEnd()`（在 `src/term/width.ts`）。
+
+6. **`clear` 的时机**
+   `xterm.clear()` 会让 readline 的 `promptMarker` 失效，只能在两次 `read()` 之间调用。
+
+## 明确不做的事
+
+- **管道 / 重定向 / 退出码**：没有进程模型，不做
+- **构建期生成正文副本**：全站只保留 `content/` 一份内容
+- **自己写 tokenizer / 行编辑器**：有现成库就用现成的
+- **SEO 预渲染**：暂时不做。真要做，成本是「每篇生成静态 HTML + sitemap」，`content/` 里的 `.md` 已经是完整真相源
+- **全屏 markdown 阅读器**：`cat` 直接输出渲染后的 ANSI，不做 DOM overlay
