@@ -12,7 +12,7 @@ import { marked } from 'marked'
 import type { Token, Tokens } from 'marked'
 import { blue, bold, cyan, dim, hyperlink, italic, magenta, yellow } from '../term/ansi.ts'
 import { wrapAnsi } from '../term/wrap.ts'
-import { padEnd, visibleWidth } from '../term/width.ts'
+import { padEnd, stripAnsi, visibleWidth } from '../term/width.ts'
 import { highlightCode, normalizeLang } from './highlight.ts'
 
 const link = (href: string, text: string): string => hyperlink(href, blue(text))
@@ -220,6 +220,21 @@ function renderTableVertical(header: readonly string[], rows: readonly string[][
     .join('\n\n')
 
   return `${body}\n\n`
+}
+
+/**
+ * 抽出所有标题，给 pager 的目录跳转用。
+ *
+ * 只取文字，不带样式；pager 拿到标题后在渲染好的行里找对应位置。
+ */
+export function headingTitles(source: string): string[] {
+  const titles: string[] = []
+  for (const token of marked.lexer(source)) {
+    if (token.type !== 'heading') continue
+    const text = stripAnsi(inline((token as Tokens.Heading).tokens)).trim()
+    if (text !== '') titles.push(text)
+  }
+  return titles
 }
 
 /** width 是终端列数，0 表示不限（测试用） */

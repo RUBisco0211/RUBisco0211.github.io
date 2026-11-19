@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { renderMarkdown } from '../../src/content/render.ts'
+import { headingTitles, renderMarkdown } from '../../src/content/render.ts'
 import { visibleWidth } from '../../src/term/width.ts'
 
 /** 去掉 ANSI 和 OSC 8，只看文字 */
@@ -126,4 +126,13 @@ test('width 为 0 时不限宽，表格始终画网格', () => {
 test('空文档返回空串', () => {
   assert.equal(renderMarkdown(''), '')
   assert.equal(renderMarkdown('\n\n'), '')
+})
+
+test('headingTitles 抽出所有标题的纯文本', () => {
+  assert.deepEqual(headingTitles('# 一级\n\n正文\n\n## 二级 **粗**\n\n### 三级'), [
+    '一级',
+    '二级 粗',
+    '三级',
+  ])
+  assert.deepEqual(headingTitles('只有正文'), [])
 })

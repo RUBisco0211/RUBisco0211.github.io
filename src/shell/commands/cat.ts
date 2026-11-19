@@ -15,7 +15,7 @@ const cat: Command = {
 
     // markdown 渲染器和 pager 加起来 40KB gzip 左右，只有 cat 用得上，
     // 静态 import 会把它们塞进首屏，所以按需加载。
-    const [{ renderMarkdown }, { runPager }, { dim }] = await Promise.all([
+    const [{ renderMarkdown, headingTitles }, { runPager }, { dim }] = await Promise.all([
       import('../../content/render.ts'),
       import('../../term/pager.ts'),
       import('../../term/ansi.ts'),
@@ -26,6 +26,7 @@ const cat: Command = {
     // 视口变了 pager 会带着新宽度再调一次 render
     await runPager(ctx.term, {
       title: doc.title,
+      outline: headingTitles(text),
       render: (cols) => [
         ...doc.frontmatter.map(([key, value]) => `${dim(key.padEnd(labelWidth))}  ${value}`),
         '',
