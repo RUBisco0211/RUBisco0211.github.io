@@ -200,16 +200,19 @@ test('高亮不会打乱屏幕内容和光标', async () => {
   assert.equal(term.buffer.active.cursorX, 13) // "$ " + "ls -l blog/"
 })
 
-test('回车之后高亮保留在 scrollback 里（靠 patch refreshUnhighlighted）', async () => {
+/**
+ * 记录一下库的默认行为：回车前它会调 State.refreshUnhighlighted() 把这行重画成
+ * 无样式，所以冻进 scrollback 的命令行不带颜色。
+ *
+ * 我们试过覆盖这个方法让颜色保留，后来觉得不值得动库的内部实现，撤掉了。
+ * 这条用例留着是为了：哪天升级 xterm-readline 后行为变了，我们能立刻发现。
+ */
+test('回车之后这行会被重绘成无样式（库的默认行为）', async () => {
   globalThis.window = {
     localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
   }
   const { default: headless } = await import('@xterm/headless')
   const { Readline } = await import('xterm-readline')
-  const { State } = await import('xterm-readline/lib/state.js')
-
-  // 和 src/term/terminal.ts 里那处 patch 保持一致
-  State.prototype.refreshUnhighlighted = function noop() {}
 
   const term = new headless.Terminal({ cols: 30, rows: 10, allowProposedApi: true })
   term.attachCustomKeyEventHandler = () => {}
@@ -231,7 +234,7 @@ test('回车之后高亮保留在 scrollback 里（靠 patch refreshUnhighlighte
   term.input('\r', true)
   await flush(term)
 
-  // 回车后这一行冻进 scrollback，颜色还在
-  assert.equal(term.buffer.active.getLine(0).getCell(2).getFgColor(), 6)
+  // 回车后颜色被清掉，但内容不变
+  assert.equal(term.buffer.active.getLine(0).getCell(2).getFgColor(), -1)
   assert.equal(rl.getLine(), 'ls blog')
 })
