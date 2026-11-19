@@ -33,7 +33,8 @@ export const config: SiteConfig = {
   ],
   aliases: {
     blog: 'ls blog',
-    projects: 'ls projects',
+    proj: 'ls projects',
     clr: 'clear',
+    his: 'history',
   },
 }
