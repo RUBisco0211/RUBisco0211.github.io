@@ -1,16 +1,9 @@
 import { cyan, dim, green, red, yellow } from '../../term/ansi.ts'
+import { formatCount } from '../../term/format.ts'
 import { padEnd, visibleWidth } from '../../term/width.ts'
 import { completePath } from '../complete.ts'
 import { lookup, type FileEntry } from '../fs.ts'
 import type { Command } from '../types.ts'
-
-/** 1786 → '1.8k'，832 → '832' */
-function formatChars(count: number): string {
-  if (count <= 0) return '-'
-  if (count < 1000) return String(count)
-  const k = count / 1000
-  return `${k < 10 ? k.toFixed(1) : Math.round(k)}k`
-}
 
 /**
  * 每格自带颜色，`render` 只负责对齐。
@@ -38,7 +31,7 @@ function fileRow(file: FileEntry): Row {
   return {
     kind: dim(file.kind),
     date: file.date ? dim(file.date) : EMPTY,
-    chars: file.chars > 0 ? yellow(formatChars(file.chars)) : EMPTY,
+    chars: file.chars > 0 ? yellow(formatCount(file.chars)) : EMPTY,
     name: file.name,
     tags: file.tags.length > 0 ? green(file.tags.join(' ')) : EMPTY,
   }
