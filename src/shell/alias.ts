@@ -3,13 +3,11 @@ import { tokenize } from './tokenize.ts'
 export type AliasTable = Readonly<Record<string, string>>
 
 /**
- * alias 展开：单层，纯 token 替换。
+ * alias 展开：单层，纯 token 替换
  *
- *   latest: 'ls blog --sort date'
- *   ['latest', '--limit', '3']  →  ['ls', 'blog', '--sort', 'date', '--limit', '3']
- *
- * 只展开一次 —— 目标命令本身如果也是别名，不会继续展开。
- * 不支持 $1 之类的占位符，也不支持链式别名。
+ * 只展开一次，目标命令本身如果也是 alias，不会继续展开
+ * 不支持 $n 占位符
+ * 不支持链式别名
  */
 export function createAliasExpander(table: AliasTable): (argv: string[]) => string[] {
     const tokens = new Map(
