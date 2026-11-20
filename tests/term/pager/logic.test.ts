@@ -6,9 +6,8 @@ import {
     createWheelAccumulator,
     locateTitles,
     pagerStatus,
-    wheelLines,
-} from '../../src/term/pager.ts'
-import { visibleWidth } from '../../src/render/width.ts'
+} from '../../../src/term/pager/logic.ts'
+import { visibleWidth } from '../../../src/render/width.ts'
 
 const plain = (text: string): string => text.replace(/\x1b\[[0-9;]*m/g, '')
 
@@ -20,23 +19,11 @@ test('offset 被夹在 [0, total - height]', () => {
     assert.equal(clampOffset(5, 3, 10), 0)
 })
 
-test('滚轮 delta 换算成小数行数', () => {
-    // 一格约 100px，按 80px/行 算是 1.25 行
-    assert.equal(wheelLines(100, 0), 1.25)
-    assert.equal(wheelLines(-80, 0), -1)
-    // 触控板的小增量不强行凑一行
-    assert.ok(wheelLines(3, 0) < 1)
-    assert.equal(wheelLines(4, 1), 4)
-    assert.equal(wheelLines(1, 2), 10)
-    assert.equal(wheelLines(0, 0), 0)
-})
-
 test('滚轮累积：攒够一行才滚', () => {
-    const wheel = createWheelAccumulator(80)
-
     // 触控板连发 10 个 8px 的小事件 = 80px，正好滚一行
+    const trackpad = createWheelAccumulator(80)
     let scrolled = 0
-    for (let i = 0; i < 10; i += 1) scrolled += wheel.next(8)
+    for (let i = 0; i < 10; i += 1) scrolled += trackpad.next(8)
     assert.equal(scrolled, 1)
 
     // 鼠标滚轮一格 100px → 1.25 行：前三次各滚 1 行，第四次攒到 2 行
@@ -45,6 +32,10 @@ test('滚轮累积：攒够一行才滚', () => {
         [mouse.next(100), mouse.next(100), mouse.next(100), mouse.next(100)],
         [1, 1, 1, 2],
     )
+
+    // deltaMode 1（行）和 2（页）直接换算
+    assert.equal(createWheelAccumulator(80).next(4, 1), 4)
+    assert.equal(createWheelAccumulator(80).next(1, 2), 10)
 
     // 攒着的余量可以丢掉
     const reset = createWheelAccumulator(80)

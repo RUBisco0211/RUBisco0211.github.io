@@ -7,10 +7,8 @@ export interface ReadOptions {
 }
 
 /**
- * 在 pager 里打开一篇文档。
+ * 在 pager 里打开一篇文档
  *
- * cat 和 search / tags 都用它：search 选中后带着 snippet 的词打开，直接跳到命中的位置。
- * markdown 渲染器和 pager 按需加载，避免进主包。
  */
 export async function readDoc(
     ctx: Ctx,
@@ -21,7 +19,7 @@ export async function readDoc(
     const [{ renderMarkdown, headingTitles }, { runPager }, { dim }, { formatTable }] =
         await Promise.all([
             import('../render/markdown.ts'),
-            import('../term/pager.ts'),
+            import('../term/pager/index.ts'),
             import('../render/ansi.ts'),
             import('../render/table.ts'),
         ])
