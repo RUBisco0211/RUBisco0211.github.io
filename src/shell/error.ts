@@ -1,15 +1,11 @@
 /**
- * 命令错误。
+ * shell 命令错误统一封装
  *
- * 命令不自己 println 红字，而是抛这个错误，由 shell.run() 捕获后交给
- * Term.printError() 统一染红输出：只有一处决定「错误长什么样」，
- * 命令里也就不会漏掉红色、不会各写各的文案。
+ * shell 层自己不 println 而是抛这个错误，由 shell.run 捕获并渲染
  *
- * 注意和「意外异常」的区别：意外异常（bug）仍然一路抛给 main.ts，
- * 不会走到这里 —— 这不是用户输入的错，不该被静默吞掉。
  */
 export class ShellError extends Error {
-    /** 附带的提示，比如可选值列表，会以压暗样式跟在消息后面 */
+    /** 附带提示 */
     readonly hint?: string
 
     constructor(message: string, hint?: string) {
@@ -19,7 +15,7 @@ export class ShellError extends Error {
     }
 }
 
-/** 命令里报错的简写：`fail('没有这个路径：x')` */
+/** 给命令提供抛出错误的接口 */
 export function fail(message: string, hint?: string): never {
     throw new ShellError(message, hint)
 }

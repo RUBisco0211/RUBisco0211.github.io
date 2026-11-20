@@ -13,9 +13,9 @@ export interface ThemeStore {
     current(): string
     /** 当前实际生效的明暗 */
     mode(): ThemeMode
-    /** 切换主题并记住，返回 false 表示名字不认识 */
+    /** 切换主题并记住，返回 false 表示无该主题 */
     set(name: string): boolean
-    /** 只应用不落盘，用于实时预览 */
+    /** 只应用不存储，仅用于实时预览 */
     preview(name: string): boolean
 }
 

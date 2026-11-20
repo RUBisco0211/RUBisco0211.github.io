@@ -6,10 +6,6 @@ import { fail } from '../error.ts'
 import { lookup, type FileEntry } from '../fs.ts'
 import type { Command } from '../types.ts'
 
-/**
- * 每格自带颜色，`render` 只负责对齐。
- * 缺数据的地方统一用压暗的 '-'，不要让它抢到和真实值一样的分量。
- */
 interface Row {
     kind: string
     date: string
@@ -90,7 +86,7 @@ const ls: Command = {
 
         const { dirs, files } = found.node
         if (dirs.length === 0 && files.length === 0) {
-            ctx.term.println(dim('（空目录）'))
+            ctx.term.println(dim('[空目录]'))
             return
         }
 

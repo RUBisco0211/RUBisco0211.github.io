@@ -63,22 +63,22 @@ export function createShell(deps: ShellDeps): Shell {
         },
     }
 
+    // [NOTE] 处理并执行命令
     async function run(line: string): Promise<void> {
         // tokenize 并展开 alias
         const argv = expand(tokenize(line))
         const [head, ...args] = argv
         if (head === undefined) return
 
-        // ShellError 是给用户看的（参数错、路径不存在…），统一交给终端染红；
-        // 其他异常是代码 bug，交给 main 兜底，不要静默吞掉
         try {
             // 查表匹配命令
             const command = registry.get(head)
-            if (!command) fail(`没有这个命令：${head}`)
+            if (!command) fail(`没有找到命令 ${head}`)
 
             // 执行命令
             await command.run(ctx, args)
         } catch (error) {
+            // [NOTE] 命令报 ShellError 在此处理，其他抛出给 main 处理
             if (!(error instanceof ShellError)) throw error
             deps.term.printError(error.message, error.hint)
         }

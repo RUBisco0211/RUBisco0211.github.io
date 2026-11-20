@@ -52,7 +52,7 @@ term.setLineHighlighter((line) =>
     }),
 )
 
-/** Tab：一个候选直接补，多个补到公共前缀，补不动就列出来 */
+/** tab 补全 */
 function handleTab(): void {
     const line = term.getLine()
     const { candidates, from, to } = completeLine(shell.ctx, line)
@@ -60,11 +60,13 @@ function handleTab(): void {
 
     const splice = (value: string): string => line.slice(0, from) + value + line.slice(to)
 
+    // 一个候选就直接补全
     if (candidates.length === 1) {
         term.updateLine(splice(candidates[0]!.value))
         return
     }
 
+    // 补全到公共前缀
     const prefix = commonPrefix(candidates.map((candidate) => candidate.value))
     if (prefix.length > line.length - from) {
         term.updateLine(splice(prefix))

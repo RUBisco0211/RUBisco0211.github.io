@@ -14,9 +14,10 @@ const history: Command = {
             return
         }
 
+        // `history` 全屏 select 查看历史
         const entries = ctx.term.historyEntries()
         if (entries.length === 0) {
-            ctx.term.println(dim('还没有历史记录'))
+            ctx.term.println(dim('无历史记录'))
             return
         }
 

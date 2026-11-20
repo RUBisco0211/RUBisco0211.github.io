@@ -34,10 +34,12 @@ const theme: Command = {
     run(ctx, args) {
         const name = args[0]
 
+        // `theme` 交互式选择主题
         if (!name) {
             return pick(ctx)
         }
 
+        // `theme <name>` 直接切换主题
         if (ctx.theme.set(name)) {
             ctx.term.println(green(`主题已切换为 ${name}（${ctx.theme.mode()}）`))
             return

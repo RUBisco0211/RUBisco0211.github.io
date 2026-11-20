@@ -11,7 +11,6 @@ export type InfoLine =
           readonly kind: 'field'
           readonly label: string
           readonly value: string
-          /** 有值就渲染成 OSC 8 可点链接 */
           readonly href?: string
       }
 
@@ -37,8 +36,7 @@ const BASE = import.meta.env?.BASE_URL ?? '/'
 const ART_URL = `${BASE}assets/neofetch-mona.txt`
 
 /**
- * neofetch 的 ASCII art 放在 public/assets/ 里，运行时拉一次然后缓存。
- * 不塞进 bundle：7KB 的转义序列压缩后也没多少，但它是静态资源，
+ * neofetch 的 ASCII art 放在 public/assets/ 里，运行时获取一次然后缓存
  * 跟 content/ 的正文一样按需取更合适；拉不到就只显示信息，不影响命令。
  */
 let artCache: readonly string[] | undefined
