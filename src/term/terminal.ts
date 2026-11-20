@@ -195,6 +195,53 @@ export class Term {
         this.xterm.options.theme = theme
     }
 
+    /** 当前是否有选区（xterm 原生选择） */
+    hasSelection(): boolean {
+        return this.xterm.hasSelection()
+    }
+
+    /** 选区纯文本，行间是 \n */
+    getSelection(): string {
+        return this.xterm.getSelection()
+    }
+
+    clearSelection(): void {
+        this.xterm.clearSelection()
+    }
+
+    /**
+     * 把文本写进系统剪贴板。
+     *
+     * clipboard API 只在安全上下文可用（HTTPS / localhost），失败时退回
+     * execCommand。两者都失败返回 false，由调用方决定怎么提示。
+     */
+    async copy(text: string): Promise<boolean> {
+        if (text === '') return false
+
+        try {
+            await navigator.clipboard.writeText(text)
+            return true
+        } catch {
+            // 非安全上下文或权限被拒，走兜底
+        }
+
+        const area = document.createElement('textarea')
+        area.value = text
+        area.setAttribute('readonly', '')
+        area.style.position = 'fixed'
+        area.style.opacity = '0'
+        document.body.appendChild(area)
+        area.select()
+
+        try {
+            return document.execCommand('copy')
+        } catch {
+            return false
+        } finally {
+            area.remove()
+        }
+    }
+
     /** 终端当前列数，给需要按宽度排版的命令用 */
     /**
      * 接管命令行的实时着色。

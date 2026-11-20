@@ -9,7 +9,7 @@ import {
 } from '../render/ansi.ts'
 import { markMatches, matchesQuery } from '../render/mark.ts'
 import { clampWindow } from './select.ts'
-import { resolveKeys, type Keymap } from './keys.ts'
+import { keyChord, lookupKey, resolveKeys, type Keymap } from './keys.ts'
 import type { Term } from './terminal.ts'
 import { padEnd, stripAnsi, truncateTo, visibleWidth } from '../render/width.ts'
 import { wrapAnsi } from '../render/wrap.ts'
@@ -55,6 +55,7 @@ export type PagerAction =
     | 'halfUp'
     | 'top'
     | 'bottom'
+    | 'copy'
 
 /** 默认键位只在组件内部用，调用方只传覆盖项 */
 const DEFAULT_KEYS: Keymap<PagerAction> = {
@@ -73,12 +74,23 @@ const DEFAULT_KEYS: Keymap<PagerAction> = {
     halfUp: ['u'],
     top: ['g', 'Home'],
     bottom: ['G', 'End'],
+    copy: ['y', 'ctrl+c', 'ctrl+shift+c', 'meta+c'],
 }
 
 /** 多少像素算一行。鼠标滚轮一格约 100px，所以一格 ≈ 1.25 行 */
 const PIXELS_PER_LINE = 80
 
 type Mode = 'browse' | 'search' | 'outline'
+
+/**
+ * 把 xterm 的选区文本整理成适合粘贴的样子。
+ *
+ * buffer 的每一行是空格填充的，选到行尾会带一串空白；选区结束在空行时
+ * 末尾还会剩几个换行。段落之间的空行要保留，所以只去行尾空白和末尾换行。
+ */
+export function cleanSelection(text: string): string {
+    return text.replace(/[ \t]+$/gm, '').replace(/\n+$/, '')
+}
 
 export function clampOffset(offset: number, total: number, height: number): number {
     const max = Math.max(0, total - height)
@@ -223,6 +235,12 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
     let outlineCursor = 0
     let outlineOffset = 0
 
+    /** pager 是否还在。复制是异步的，回来时可能已经 quit，不能再往终端写 */
+    let active = true
+
+    /** 复制提示的定时器：提示写在字符网格里，到点要把那行重画回来 */
+    let toastTimer: ReturnType<typeof setTimeout> | undefined
+
     /** 重新渲染并折行，按比例保住原来的阅读位置 */
     const rebuild = (): void => {
         const previousMax = Math.max(0, lines.length - height)
@@ -245,33 +263,33 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
         matchIndex = matches.length > 0 ? 0 : -1
     }
 
+    const drawBodyRow = (row: number): string => {
+        const line = lines[offset + row] ?? ''
+        const shown = query === '' ? line : markMatches(line, query)
+        return `${moveTo(row + 1)}${ERASE_LINE}${shown}`
+    }
+
     const drawBody = (): string[] => {
         const parts: string[] = []
-        for (let row = 0; row < height; row += 1) {
-            const line = lines[offset + row] ?? ''
-            const shown = query === '' ? line : markMatches(line, query)
-            parts.push(`${moveTo(row + 1)}${ERASE_LINE}${shown}`)
-        }
+        for (let row = 0; row < height; row += 1) parts.push(drawBodyRow(row))
         return parts
+    }
+
+    const drawOutlineRow = (row: number): string => {
+        const index = outlineOffset + row
+        const title = titles[index]
+        if (title === undefined) return `${moveTo(row + 1)}${ERASE_LINE}`
+
+        const current = index === outlineCursor
+        const marker = current ? cyan('>') : ' '
+        const label = current ? cyan(truncateTo(title, cols - 4)) : truncateTo(title, cols - 4)
+        return `${moveTo(row + 1)}${ERASE_LINE} ${marker} ${label}`
     }
 
     const drawOutline = (): string[] => {
         outlineOffset = clampWindow(outlineCursor, outlineOffset, height)
         const parts: string[] = []
-
-        for (let row = 0; row < height; row += 1) {
-            const index = outlineOffset + row
-            const title = titles[index]
-            if (title === undefined) {
-                parts.push(`${moveTo(row + 1)}${ERASE_LINE}`)
-                continue
-            }
-            const active = index === outlineCursor
-            const marker = active ? cyan('>') : ' '
-            const label = active ? cyan(truncateTo(title, cols - 4)) : truncateTo(title, cols - 4)
-            parts.push(`${moveTo(row + 1)}${ERASE_LINE} ${marker} ${label}`)
-        }
-
+        for (let row = 0; row < height; row += 1) parts.push(drawOutlineRow(row))
         return parts
     }
 
@@ -306,9 +324,34 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
     }
 
     const draw = (): void => {
+        // 重绘后 buffer 内容变了，旧选区会漂到新内容上，所以每次重画都清掉。
+        // 复制流程是「先取文本、清选区、再画反馈」，顺序不能反。
+        if (term.hasSelection()) term.clearSelection()
+
         const parts = mode === 'outline' ? drawOutline() : drawBody()
         parts.push(`${moveTo(rows)}${ERASE_LINE}${statusLine()}`)
         term.write(parts.join(''))
+    }
+
+    /**
+     * 在屏幕右上角盖一条临时提示（复制结果这种），到点再把被盖住的那行重画回来。
+     *
+     * 内容直接写进字符网格，会盖住底下的正文；中途任何一次 draw() 也会把它冲掉。
+     * 写完后把光标放回状态行末尾，不然它停在提示右边缘。
+     */
+    const flash = (text: string): void => {
+        const label = ` ${text} `
+        const width = visibleWidth(label)
+        if (width >= cols) return
+
+        term.write(`${moveTo(1, cols - width + 1)}${inverse(label)}${moveTo(rows, cols)}`)
+
+        clearTimeout(toastTimer)
+        toastTimer = setTimeout(() => {
+            if (!active) return
+            const row = mode === 'outline' ? drawOutlineRow(0) : drawBodyRow(0)
+            term.write(`${row}${moveTo(rows, cols)}`)
+        }, 1200)
     }
 
     /** 返回是否真的滚动了（滚到头时返回 false） */
@@ -349,7 +392,23 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
     return new Promise<void>((resolve) => {
         const wheel = createWheelAccumulator()
 
+        /** 复制当前选区，右上角提示结果 */
+        const copySelection = (): void => {
+            if (!term.hasSelection()) return
+
+            const text = cleanSelection(term.getSelection())
+            term.clearSelection()
+            if (text === '') return
+
+            void term.copy(text).then((ok) => {
+                if (!active) return
+                flash(ok ? '已复制' : '复制失败')
+            })
+        }
+
         const quit = (): void => {
+            active = false
+            clearTimeout(toastTimer)
             clearTimeout(resizeTimer)
             releaseResize()
             release()
@@ -358,7 +417,7 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
         }
 
         const handleSearchKey = (event: KeyboardEvent): boolean => {
-            switch (keymap.get(event.key)) {
+            switch (lookupKey(keymap, event)) {
                 case 'confirm':
                     query = typing
                     recalcMatches()
@@ -386,7 +445,7 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
         }
 
         const handleOutlineKey = (event: KeyboardEvent): boolean => {
-            switch (keymap.get(event.key)) {
+            switch (lookupKey(keymap, event)) {
                 case 'up':
                     outlineCursor = Math.max(0, outlineCursor - 1)
                     draw()
@@ -412,12 +471,16 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
         }
 
         const handleBrowseKey = (event: KeyboardEvent): boolean => {
-            switch (keymap.get(event.key)) {
+            switch (lookupKey(keymap, event)) {
                 case 'quit':
                     quit()
                     return true
                 case 'cancel':
-                    // 有搜索就先把搜索清掉，再按一次才退出
+                    // 有选区先清选区，再清搜索，最后才退出
+                    if (term.hasSelection()) {
+                        term.clearSelection()
+                        return true
+                    }
                     if (query !== '') {
                         query = ''
                         matches = []
@@ -426,6 +489,9 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
                         return true
                     }
                     quit()
+                    return true
+                case 'copy':
+                    copySelection()
                     return true
                 case 'search':
                     mode = 'search'
@@ -476,6 +542,14 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
 
         const release = term.captureKeys(
             (event) => {
+                // 带修饰键的复制快捷键（⌘C / Ctrl+Shift+C）在三个模式下都生效，
+                // 否则搜索/目录模式会把组合键吞掉。裸键位（y）不在这里拦，
+                // 否则搜索模式里的 y 就打不出来了
+                const chord = keyChord(event)
+                if (chord !== event.key && lookupKey(keymap, event) === 'copy') {
+                    copySelection()
+                    return
+                }
                 if (mode === 'search') handleSearchKey(event)
                 else if (mode === 'outline') handleOutlineKey(event)
                 else handleBrowseKey(event)

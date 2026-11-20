@@ -8,7 +8,7 @@ import {
     dim,
     moveTo,
 } from '../render/ansi.ts'
-import { resolveKeys, type Keymap } from './keys.ts'
+import { lookupKey, resolveKeys, type Keymap } from './keys.ts'
 import type { Term } from './terminal.ts'
 import { truncateTo } from '../render/width.ts'
 
@@ -167,7 +167,7 @@ export function select<T>(term: Term, options: SelectOptions<T>): Promise<T | un
                 }
             }
 
-            switch (keymap.get(event.key)) {
+            switch (lookupKey(keymap, event)) {
                 case 'confirm':
                     finish(items[index])
                     return

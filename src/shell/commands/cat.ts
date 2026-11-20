@@ -22,7 +22,7 @@ const cat: Command = {
         const outline = headingTitles(text)
         const hints = ['j/k 行', '空格 翻页']
         if (outline.length > 0) hints.push('t 目录')
-        hints.push('/ 搜索', 'q 退出')
+        hints.push('/ 搜索', 'y 复制', 'q 退出')
 
         // 视口变了 pager 会带着新宽度再调一次 render
         await runPager(ctx.term, {

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
+    cleanSelection,
     clampOffset,
     createWheelAccumulator,
     locateTitles,
@@ -133,4 +134,14 @@ test('找不到的标题返回 -1', () => {
 test('locateTitles 忽略行内 ANSI 和大小写', () => {
     const lines = ['\x1b[1m\x1b[36m安装工具\x1b[39m\x1b[22m']
     assert.deepEqual(locateTitles(lines, ['安装工具']), [0])
+})
+
+test('cleanSelection 去掉行尾空白和末尾换行', () => {
+    // xterm 的 buffer 行是空格填充的，选到行尾会带一串空白
+    assert.equal(cleanSelection('foo   \nbar  \n\n'), 'foo\nbar')
+    assert.equal(cleanSelection('code\t\t\n'), 'code')
+    // 段落中间的空行要保留
+    assert.equal(cleanSelection('a\n\nb'), 'a\n\nb')
+    // 选中纯空白时得到空串，调用方据此跳过复制
+    assert.equal(cleanSelection('   \n\n'), '')
 })
