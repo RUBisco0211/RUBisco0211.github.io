@@ -145,8 +145,10 @@ ls / help / cat / stats / tags / Tab 补全都是「逐行、若干单元格、�
 
 柱状行（label + 柱 + 右对齐数值）抽在 `render/barRows.ts`，stats 和 tags 共用一套布局。
 
-例外：neofetch（art + 分隔线 + 横向并排）和 markdown 表格（单元格折行、定宽压缩）保留各自实现，
-没有塞进 table 抽象。
+neofetch 的信息区是三张小表（个人 / 终端 / 站点），每张表各自用自己的列宽对齐，
+分隔线统一取整块最大宽度；art 与信息区的左右并排仍归 `layout()`。
+
+例外：markdown 表格（单元格折行、定宽压缩）保留自己的实现，没有塞进 table 抽象。
 
 ## 开发
 

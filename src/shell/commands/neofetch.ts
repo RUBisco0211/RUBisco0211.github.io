@@ -1,6 +1,7 @@
 import type { DocMeta } from '../../content/types.ts'
 import { blue, bold, dim, hyperlink } from '../../render/ansi.ts'
 import { formatChars } from '../../content/format.ts'
+import { columnWidths, formatTable, rowWidth } from '../../render/table.ts'
 import { padEnd, visibleWidth } from '../../render/width.ts'
 import type { Command } from '../types.ts'
 
@@ -103,22 +104,55 @@ export function buildInfo(input: InfoInput): InfoLine[] {
     return lines
 }
 
-/** 上色并对齐，分隔线按最宽的一行撑满 */
+/**
+ * 上色并对齐。neofetch 其实是三张小表（个人 / 终端 / 站点），
+ * 每张表自己对齐一列 label；分隔线统一用整块最宽的那张表，保证不参差。
+ */
 export function renderInfo(lines: readonly InfoLine[]): string[] {
-    const fields = lines.filter((line) => line.kind === 'field')
-    const labelWidth = Math.max(0, ...fields.map((field) => visibleWidth(field.label)))
-    const values = lines.flatMap((line) =>
-        line.kind === 'field' ? [line.value] : line.kind === 'title' ? [line.value] : [],
-    )
-    const valueWidth = Math.max(0, ...values.map(visibleWidth))
-    const width = labelWidth + 2 + valueWidth
+    type Field = Extract<InfoLine, { kind: 'field' }>
 
-    return lines.map((line) => {
-        if (line.kind === 'separator') return dim('─'.repeat(width))
-        if (line.kind === 'title') return bold(line.value)
-        const value = line.href ? hyperlink(line.href, blue(line.value)) : line.value
-        return `${dim(padEnd(line.label, labelWidth))}  ${value}`
-    })
+    /** 把一组 field 渲染成一张表，返回它的行和宽度 */
+    const table = (group: readonly Field[]): { lines: string[]; width: number } => {
+        const rows = group.map((field): string[] => [
+            dim(field.label),
+            field.href ? hyperlink(field.href, blue(field.value)) : field.value,
+        ])
+        const widths = columnWidths(rows)
+        return { lines: formatTable(rows, { widths }), width: rowWidth(widths) }
+    }
+
+    // 先把内容按 separator 切成块（标题是一行，其余是表），顺便量总宽
+    const blocks: string[][] = []
+    let group: Field[] = []
+    let width = 0
+    const pushTable = (): void => {
+        if (group.length === 0) return
+        const rendered = table(group)
+        blocks.push(rendered.lines)
+        width = Math.max(width, rendered.width)
+        group = []
+    }
+
+    for (const line of lines) {
+        if (line.kind === 'field') {
+            group.push(line)
+            continue
+        }
+        if (line.kind === 'title') {
+            pushTable()
+            blocks.push([bold(line.value)])
+            width = Math.max(width, visibleWidth(line.value))
+            continue
+        }
+        // separator：先把前面的表收尾，分隔线稍后用总宽拼
+        pushTable()
+        blocks.push([])
+    }
+    pushTable()
+
+    // 空块代表一条分隔线，其余原样输出
+    const rule = dim('─'.repeat(width))
+    return blocks.flatMap((block) => (block.length === 0 ? [rule] : block))
 }
 
 /**
