@@ -163,7 +163,7 @@ function renderTable(table: Tokens.Table, width: number): string {
         cells.map((cell, i) => wrapAnsi(cell, widths[i]!))
 
     const lines: string[] = []
-    lines.push(...renderRow(wrapRow(header), widths, (text) => bold(cyan(text))))
+    lines.push(...renderRow(wrapRow(header), widths, (text) => bold(text)))
     lines.push(dim(widths.map((w) => '─'.repeat(w)).join('─┼─')))
     for (const row of rows) lines.push(...renderRow(wrapRow(row), widths, (text) => text))
 
