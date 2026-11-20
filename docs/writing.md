@@ -59,11 +59,11 @@ fork: 8
 
 ## markdown 支持到什么程度
 
-渲染器是自己写的（`src/content/render.ts`），走 `marked` 的 token 树，支持：
+渲染器是自己写的（`src/render/markdown.ts`），走 `marked` 的 token 树，支持：
 
 - 标题、段落、粗体/斜体/删除线、行内代码、链接（OSC 8 可点）
 - 有序/无序列表（含嵌套）、引用、分隔线
-- 代码块——按语言做语法着色（shell / js / ts / json / yaml / diff / go / python / md）
+- 代码块——带语言标签和边框，按语言做语法着色（shell / js / ts / json / yaml / diff / go / python / md）
 - 表格——会先压列宽、让单元格折行；压不下去才退化成竖向排布
 - 图片——降级成 `[图片: 文件名]` 的可点链接
 

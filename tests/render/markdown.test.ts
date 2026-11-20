@@ -20,10 +20,12 @@ test('列表项逐行输出', () => {
     assert.match(lines[1]!, /第二/)
 })
 
-test('代码块去掉围栏', () => {
+test('代码块去掉围栏，显示语言标签', () => {
     const out = renderMarkdown('```sh\nbrew install demo\n```')
-    assert.equal(plain(out), 'brew install demo')
-    assert.doesNotMatch(plain(out), /```/)
+    const text = plain(out)
+    assert.match(text, /brew install demo/)
+    assert.match(text, /sh/)
+    assert.doesNotMatch(text, /```/)
 })
 
 test('没有语言标注的代码块压暗', () => {

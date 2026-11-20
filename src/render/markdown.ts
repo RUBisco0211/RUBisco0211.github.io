@@ -63,6 +63,35 @@ function inlineToken(token: Token): string {
     }
 }
 
+/**
+ * 代码块。
+ *
+ * 字符网格里没有背景块，所以用边框把代码和正文隔开：顶边带语言标签，
+ * 左侧一条竖线，底边收口。宽度够时预先按内宽折行，保证每行都带竖线，
+ * 不交给 pager 去折（那会丢掉边框）。
+ */
+function renderCode(code: Tokens.Code, width: number, indent: string): string {
+    const body = code.text.replace(/\n$/, '')
+    const label = code.lang?.trim() ?? ''
+    const highlighted = highlightCode(body, normalizeLang(label))
+
+    const gutter = 2 // '│ '
+    const total = width > 0 ? Math.max(4, width - visibleWidth(indent)) : 0
+    const inner = total > 0 ? total - gutter : 0
+
+    const rows = highlighted
+        .split('\n')
+        .flatMap((line) => (inner > 0 ? wrapAnsi(line, inner) : [line]))
+
+    const headWidth = 2 + (label !== '' ? visibleWidth(` ${label} `) : 0)
+    const topFill = total > 0 ? '─'.repeat(Math.max(0, total - headWidth)) : ''
+    const top = `${indent}${dim('┌─')}${label !== '' ? ` ${cyan(label)} ` : ''}${dim(topFill)}`
+    const bottom = `${indent}${dim(`└${'─'.repeat(Math.max(0, total - 1))}`)}`
+    const lines = rows.map((line) => `${indent}${dim('│')} ${line}`)
+
+    return `${[top, ...lines, bottom].join('\n')}\n\n`
+}
+
 function block(token: Token, width: number, indent = ''): string {
     switch (token.type) {
         case 'heading': {
@@ -95,15 +124,8 @@ function block(token: Token, width: number, indent = ''): string {
             return `${lines.join('\n')}\n\n`
         }
 
-        case 'code': {
-            const code = token as Tokens.Code
-            const body = code.text.replace(/\n$/, '')
-            const highlighted = highlightCode(body, normalizeLang(code.lang))
-            return `${highlighted
-                .split('\n')
-                .map((line) => `${indent}${line}`)
-                .join('\n')}\n\n`
-        }
+        case 'code':
+            return renderCode(token as Tokens.Code, width, indent)
 
         case 'blockquote': {
             const quote = token as Tokens.Blockquote
