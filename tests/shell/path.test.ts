@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { displayPath, isAbsolute, normalize, resolvePath, splitPath } from '../../src/shell/path.ts'
+import { displayPath, normalize, resolvePath, splitPath } from '../../src/shell/path.ts'
 
 test('normalize 折叠斜杠并处理 . 和 ..', () => {
     assert.equal(normalize('/'), '/')
@@ -9,12 +9,6 @@ test('normalize 折叠斜杠并处理 . 和 ..', () => {
     assert.equal(normalize('/a/b/../c'), '/a/c')
     assert.equal(normalize('/a/../..'), '/')
     assert.equal(normalize(''), '/')
-})
-
-test('isAbsolute', () => {
-    assert.equal(isAbsolute('/a'), true)
-    assert.equal(isAbsolute('a'), false)
-    assert.equal(isAbsolute('~/a'), false)
 })
 
 test('resolvePath 处理 ~ / 相对路径', () => {

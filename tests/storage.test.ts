@@ -1,13 +1,6 @@
 import assert from 'node:assert/strict'
 import { afterEach, beforeEach, test } from 'node:test'
-import {
-    STORAGE_PREFIX,
-    readStored,
-    removeStored,
-    storageKey,
-    takeLegacy,
-    writeStored,
-} from '../src/storage.ts'
+import { readStored, takeLegacy, writeStored } from '../src/storage.ts'
 
 function fakeStorage(): Storage {
     const map = new Map<string, string>()
@@ -35,19 +28,11 @@ afterEach(() => {
     ;(globalThis as { localStorage?: Storage }).localStorage = original
 })
 
-test('所有 key 都带前缀', () => {
-    assert.equal(storageKey('theme'), 'tty.blog:theme')
-    assert.equal(STORAGE_PREFIX, 'tty.blog:')
-})
-
-test('读写删都走带前缀的 key', () => {
+test('读写都走带前缀的 key', () => {
     writeStored('theme', 'tokyo')
     assert.equal(readStored('theme'), 'tokyo')
     assert.equal(storage.getItem('theme'), null) // 裸 key 不出现
     assert.equal(storage.getItem('tty.blog:theme'), 'tokyo')
-
-    removeStored('theme')
-    assert.equal(readStored('theme'), null)
 })
 
 test('没存过时返回 null', () => {
@@ -65,6 +50,5 @@ test('localStorage 不可用时静默降级', () => {
     ;(globalThis as { localStorage?: Storage }).localStorage = undefined
     assert.equal(readStored('theme'), null)
     assert.doesNotThrow(() => writeStored('theme', 'x'))
-    assert.doesNotThrow(() => removeStored('theme'))
     assert.equal(takeLegacy('history'), null)
 })

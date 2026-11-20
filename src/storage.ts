@@ -5,9 +5,9 @@
  * 裸 key（比如 `theme`、`history`）迟早会撞车。
  */
 
-export const STORAGE_PREFIX = 'tty.blog:'
+const STORAGE_PREFIX = 'tty.blog:'
 
-export function storageKey(name: string): string {
+function storageKey(name: string): string {
     return `${STORAGE_PREFIX}${name}`
 }
 
@@ -36,16 +36,9 @@ export function writeStored(name: string, value: string): void {
     }
 }
 
-export function removeStored(name: string): void {
-    try {
-        store()?.removeItem(storageKey(name))
-    } catch {
-        // 同 writeStored，存不了不影响使用
-    }
-}
-
-/** 迁移用：读一个旧的无前缀 key，读到就删掉 */
-export function takeLegacy(legacyKey: string): string | null {
+/** 迁移用：读一个旧的无前缀 key，读到就删掉 */ export function takeLegacy(
+    legacyKey: string,
+): string | null {
     try {
         const legacy = store()
         const value = legacy?.getItem(legacyKey) ?? null

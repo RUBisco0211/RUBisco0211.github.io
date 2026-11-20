@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { DocMeta } from '../../src/content/types.ts'
-import { allFiles, buildFs, findFile, isDir, lookup } from '../../src/shell/fs.ts'
+import { buildFs, lookup } from '../../src/shell/fs.ts'
 
 const doc = (slug: string, extra: Partial<DocMeta> = {}): DocMeta => ({
     slug,
@@ -49,15 +49,6 @@ test('中文名按拼音排序', () => {
     const fs = buildFs(docs)
     const names = fs.get('/blog')?.files.map((f) => f.name) ?? []
     assert.deepEqual(names, ['阿明', '白杨'])
-})
-
-test('isDir / findFile / allFiles', () => {
-    const fs = buildFs(docs)
-    assert.equal(isDir(fs, '/blog'), true)
-    assert.equal(isDir(fs, '/nope'), false)
-    assert.equal(findFile(fs, '/blog/2026/hello')?.slug, 'blog/2026/hello')
-    assert.equal(findFile(fs, '/blog/nope'), undefined)
-    assert.equal(allFiles(fs).length, 5)
 })
 
 test('lookup 相对 cwd 解析，并接受 .md 扩展名', () => {

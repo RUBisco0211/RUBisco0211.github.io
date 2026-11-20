@@ -4,10 +4,10 @@
  * 只负责"多长"，颜色和排版交给调用方 —— 这样同一条柱子在 ls / stats / tags
  * 里都能上不同颜色。
  */
-export const BAR_CHAR = '█'
+const BAR_CHAR = '█'
 
 /** value 相对 max 的长度，至少 1 格（非零时），最多 width 格 */
-export function barLength(value: number, max: number, width: number): number {
+function barLength(value: number, max: number, width: number): number {
     if (value <= 0 || max <= 0 || width <= 0) return 0
     return Math.min(width, Math.max(1, Math.round((value / max) * width)))
 }

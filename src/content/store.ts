@@ -1,4 +1,5 @@
 import type { DocMeta, SiteTree } from './types.ts'
+import { stripFrontmatter } from './frontmatter.ts'
 
 /**
  * 运行时对内容树的只读视图。
@@ -14,16 +15,6 @@ export interface ContentStore {
 
 // node 下（测试）没有 import.meta.env，退回根路径
 const BASE = import.meta.env?.BASE_URL ?? '/'
-
-/** 去掉开头的 frontmatter 块 —— 元数据已经在 doc 里了，cat 时不该再显示一遍 */
-export function stripFrontmatter(text: string): string {
-    return (
-        text
-            .replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*\r?\n?/, '')
-            // frontmatter 后面通常还空一行，一并吃掉，免得 cat 里多出个空行
-            .replace(/^(?:[ \t]*\r?\n)+/, '')
-    )
-}
 
 export function createContentStore(tree: SiteTree): ContentStore {
     const bySlug = new Map(tree.docs.map((doc) => [doc.slug, doc]))

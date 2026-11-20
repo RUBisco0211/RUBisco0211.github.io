@@ -11,7 +11,7 @@ import type { Command } from '../types.ts'
  * 纯函数，返回带 ANSI 的行；目录青色带斜杠，文件用默认色。
  * 目录和文件各自按名字排好序（buildFs 保证的），所以这里只管缩进。
  */
-export function treeLines(fs: Fs, root: string): string[] {
+function treeLines(fs: Fs, root: string): string[] {
     const lines = [displayPath(root)]
 
     const walk = (path: string, prefix: string): void => {

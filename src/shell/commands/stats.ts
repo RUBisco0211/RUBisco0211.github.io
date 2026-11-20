@@ -9,18 +9,18 @@ import type { Command } from '../types.ts'
 const BAR_MAX = 24
 const BAR_MIN = 4
 
-export interface MonthBucket {
+interface MonthBucket {
     readonly month: string
     readonly count: number
 }
 
-export interface SizeEntry {
+interface SizeEntry {
     readonly name: string
     readonly chars: number
 }
 
 /** 按月聚合（只统计有日期的文章），新的在前 */
-export function monthsOf(docs: readonly DocMeta[]): MonthBucket[] {
+function monthsOf(docs: readonly DocMeta[]): MonthBucket[] {
     const counts = new Map<string, number>()
     for (const doc of docs) {
         if (doc.kind !== 'post' || !doc.date) continue
@@ -33,7 +33,7 @@ export function monthsOf(docs: readonly DocMeta[]): MonthBucket[] {
 }
 
 /** 篇幅排行，长的在前 */
-export function sizesOf(docs: readonly DocMeta[], limit = 5): SizeEntry[] {
+function sizesOf(docs: readonly DocMeta[], limit = 5): SizeEntry[] {
     return docs
         .filter((doc) => doc.chars > 0)
         .map((doc) => ({ name: doc.slug.split('/').pop() ?? doc.slug, chars: doc.chars }))
@@ -56,7 +56,7 @@ function barLines(
     return barRows(rows, { cols, labelWidth, paint, barMax: BAR_MAX, barMin: BAR_MIN })
 }
 
-export function statsLines(docs: readonly DocMeta[], cols: number): string[] {
+function statsLines(docs: readonly DocMeta[], cols: number): string[] {
     const posts = docs.filter((doc) => doc.kind === 'post')
     const projects = docs.filter((doc) => doc.kind === 'project')
     const tags = new Set(docs.flatMap((doc) => doc.tags))

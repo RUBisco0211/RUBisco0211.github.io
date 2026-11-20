@@ -72,17 +72,9 @@ export function getNode(fs: Fs, abs: string): FsNode | undefined {
     return fs.get(normalize(abs))
 }
 
-export function isDir(fs: Fs, abs: string): boolean {
-    return fs.has(normalize(abs))
-}
-
-export function findFile(fs: Fs, abs: string): FileEntry | undefined {
+function findFile(fs: Fs, abs: string): FileEntry | undefined {
     const { dir, base } = splitPath(abs)
     return fs.get(dir)?.files.find((file) => file.name === base)
-}
-
-export function allFiles(fs: Fs): FileEntry[] {
-    return [...fs.values()].flatMap((node) => node.files)
 }
 
 export type Target =

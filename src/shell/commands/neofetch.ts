@@ -65,7 +65,7 @@ async function loadArt(): Promise<readonly string[]> {
 const XTERM_VERSION = '5.5.0'
 
 /** 站点内容统计，纯函数，方便单测 */
-export function buildInfo(input: InfoInput): InfoLine[] {
+function buildInfo(input: InfoInput): InfoLine[] {
     const posts = input.docs.filter((doc) => doc.kind === 'post')
     const projects = input.docs.filter((doc) => doc.kind === 'project')
     const tags = new Set(input.docs.flatMap((doc) => doc.tags))
@@ -108,7 +108,7 @@ export function buildInfo(input: InfoInput): InfoLine[] {
  * 上色并对齐。neofetch 其实是三张小表（个人 / 终端 / 站点），
  * 每张表自己对齐一列 label；分隔线统一用整块最宽的那张表，保证不参差。
  */
-export function renderInfo(lines: readonly InfoLine[]): string[] {
+function renderInfo(lines: readonly InfoLine[]): string[] {
     type Field = Extract<InfoLine, { kind: 'field' }>
 
     /** 把一组 field 渲染成一张表，返回它的行和宽度 */
@@ -159,12 +159,7 @@ export function renderInfo(lines: readonly InfoLine[]): string[] {
  * 排版：够宽就左右并排，不够就把 art 放上面竖排，
  * 终端比 art 还窄时干脆不画（让它折行只会糊成一团）。
  */
-export function layout(
-    art: readonly string[],
-    info: readonly string[],
-    cols: number,
-    gap = 4,
-): string[] {
+function layout(art: readonly string[], info: readonly string[], cols: number, gap = 4): string[] {
     const artWidth = art.length > 0 ? Math.max(...art.map(visibleWidth)) : 0
     const infoWidth = info.length > 0 ? Math.max(...info.map(visibleWidth)) : 0
 

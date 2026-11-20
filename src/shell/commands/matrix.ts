@@ -17,7 +17,7 @@ const FRAME_MS = 70
 /** 半角片假名 + 数字，Matrix 里的经典字符集 */
 const CHARS = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789'
 
-export interface Column {
+interface Column {
     /** 头部所在行（可以是负数，表示还没进屏幕） */
     head: number
     /** 每帧前进几格 */
@@ -28,7 +28,7 @@ export interface Column {
     trail: string[]
 }
 
-export interface Cell {
+interface Cell {
     row: number
     char: string
     /** 0 = 头部最亮，越大越暗 */
@@ -37,7 +37,7 @@ export interface Cell {
 
 const pick = (): string => CHARS[Math.floor(Math.random() * CHARS.length)] ?? '0'
 
-export function makeColumn(rows: number, startAbove = true): Column {
+function makeColumn(rows: number, startAbove = true): Column {
     const length = 4 + Math.floor(Math.random() * Math.max(4, Math.floor(rows / 2)))
     const head = startAbove ? -Math.floor(Math.random() * rows) : 0
     return {
@@ -49,7 +49,7 @@ export function makeColumn(rows: number, startAbove = true): Column {
 }
 
 /** 把一条尾巴映射成屏幕上的格子，越界的不返回 */
-export function columnCells(column: Column, rows: number): Cell[] {
+function columnCells(column: Column, rows: number): Cell[] {
     const cells: Cell[] = []
     const top = Math.floor(column.head)
 
@@ -64,7 +64,7 @@ export function columnCells(column: Column, rows: number): Cell[] {
 }
 
 /** 推进一帧：头往下走，尾巴换一个新字符 */
-export function advance(column: Column): Column {
+function advance(column: Column): Column {
     const head = column.head + column.step
     return {
         ...column,
@@ -74,7 +74,7 @@ export function advance(column: Column): Column {
 }
 
 /** 头部和整条尾巴都出屏了，该重新开始 */
-export function isDone(column: Column, rows: number): boolean {
+function isDone(column: Column, rows: number): boolean {
     return Math.floor(column.head) - column.length >= rows
 }
 

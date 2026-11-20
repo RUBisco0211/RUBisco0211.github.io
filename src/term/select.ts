@@ -51,10 +51,7 @@ export interface SelectOptions<T> {
 }
 
 /** 按 label + detail 做子串筛选，忽略大小写 */
-export function filterItems<T>(
-    items: readonly SelectItem<T>[],
-    query: string,
-): readonly SelectItem<T>[] {
+function filterItems<T>(items: readonly SelectItem<T>[], query: string): readonly SelectItem<T>[] {
     const needle = query.trim().toLowerCase()
     if (needle === '') return items
     return items.filter((item) =>

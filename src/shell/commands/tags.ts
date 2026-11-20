@@ -5,13 +5,13 @@ import { readDoc } from '../reader.ts'
 import { fail } from '../error.ts'
 import type { Command, Ctx } from '../types.ts'
 
-export interface TagBucket {
+interface TagBucket {
     readonly tag: string
     readonly docs: readonly DocMeta[]
 }
 
 /** 按标签聚合，篇数多的在前，同数按名字排 */
-export function tagBuckets(docs: readonly DocMeta[]): TagBucket[] {
+function tagBuckets(docs: readonly DocMeta[]): TagBucket[] {
     const map = new Map<string, DocMeta[]>()
     for (const doc of docs) {
         for (const tag of doc.tags) {
@@ -26,13 +26,13 @@ export function tagBuckets(docs: readonly DocMeta[]): TagBucket[] {
 }
 
 /** 找标签，忽略大小写 */
-export function findTag(buckets: readonly TagBucket[], name: string): TagBucket | undefined {
+function findTag(buckets: readonly TagBucket[], name: string): TagBucket | undefined {
     const key = name.trim().toLowerCase()
     return buckets.find((bucket) => bucket.tag.toLowerCase() === key)
 }
 
 /** 某个标签下的文章，新的在前 */
-export function tagDocs(bucket: TagBucket): DocMeta[] {
+function tagDocs(bucket: TagBucket): DocMeta[] {
     return [...bucket.docs].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
 }
 

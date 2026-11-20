@@ -5,9 +5,9 @@
  * 只在显示给用户时用 displayPath() 转成 '~/blog' 这种形式。
  */
 
-export const ROOT = '/'
+const ROOT = '/'
 
-export function isAbsolute(path: string): boolean {
+function isAbsolute(path: string): boolean {
     return path.startsWith('/')
 }
 

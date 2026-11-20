@@ -27,7 +27,7 @@ export const CLEAR_SCREEN = `${ESC}[H${ESC}[2J`
 export const ERASE_LINE = `${ESC}[2K`
 export const RESET = `${ESC}[0m`
 export const OSC8_OPEN = `${ESC}]8;;`
-export const OSC8_TERMINATOR = `${ESC}\\`
+const OSC8_TERMINATOR = `${ESC}\\`
 export const OSC8_CLOSE = `${OSC8_OPEN}${OSC8_TERMINATOR}`
 
 /** 把光标移到 1-based 的行列 */
