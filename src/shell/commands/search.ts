@@ -1,6 +1,7 @@
 import { searchDocs } from '../../content/search.ts'
+import { dim } from '../../render/ansi.ts'
+import { select } from '../../term/select.ts'
 import { printUsage } from '../usage.ts'
-import { cyan, dim, gray } from '../../render/ansi.ts'
 import type { Command } from '../types.ts'
 
 const search: Command = {
@@ -17,15 +18,18 @@ const search: Command = {
             return
         }
 
-        ctx.term.println(dim(`${hits.length} 条结果`))
-        for (const hit of hits) {
-            const meta = [hit.doc.date, hit.doc.tags.join(' ')].filter(Boolean).join('  ')
-            ctx.term.println()
-            ctx.term.println(`${cyan(hit.doc.title)}${meta ? `  ${dim(meta)}` : ''}`)
-            ctx.term.println(dim(`  ${hit.doc.slug}`))
-            if (hit.snippet) ctx.term.println(gray(`  ${hit.snippet}`))
-        }
-        ctx.term.println()
+        const picked = await select(ctx.term, {
+            title: `搜索 “${query}”`,
+            labels: { empty: '无匹配', footer: '↑↓ 移动 · Enter 打开 · Esc 取消' },
+            hint: `${hits.length} 条`,
+            items: hits.map((hit) => ({
+                value: hit.doc.slug,
+                label: hit.doc.title,
+                detail: [hit.doc.date, hit.doc.slug].filter(Boolean).join('  '),
+            })),
+        })
+
+        if (picked) await ctx.run(`cat "${picked}"`)
     },
 }
 

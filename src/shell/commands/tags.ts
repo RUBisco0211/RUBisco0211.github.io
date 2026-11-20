@@ -1,8 +1,8 @@
 import type { DocMeta } from '../../content/types.ts'
-import { bold, cyan, dim, yellow } from '../../render/ansi.ts'
+import { cyan, dim, yellow } from '../../render/ansi.ts'
 import { barRows, type BarRow } from '../../render/barRows.ts'
-import { formatTable } from '../../render/table.ts'
-import { truncateTo, visibleWidth } from '../../render/width.ts'
+import { select } from '../../term/select.ts'
+import { visibleWidth } from '../../render/width.ts'
 import { fail } from '../error.ts'
 import type { Command } from '../types.ts'
 
@@ -67,36 +67,15 @@ export function tagsLines(docs: readonly DocMeta[], cols: number): string[] {
 }
 
 /** 某个标签下的文章，新的在前 */
-export function tagDocsLines(bucket: TagBucket, cols: number): string[] {
-    const items = [...bucket.docs].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
-    const dateWidth = 10
-    const nameWidth = Math.max(8, cols - dateWidth - 6)
-
-    const rows = items.map((doc) => {
-        const name = doc.slug.split('/').pop() ?? doc.slug
-        const title = doc.title !== name ? dim(truncateTo(doc.title, 24)) : ''
-        return [dim(doc.date ?? '-'.repeat(dateWidth)), truncateTo(name, nameWidth), title]
-    })
-
-    const header = [dim('日期'), dim('名称'), dim('标题')]
-
-    return [
-        bold(bucket.tag),
-        dim(`${items.length} 篇`),
-        '',
-        ...formatTable([header, ...rows], {
-            indent: '  ',
-            gap: ['  ', '  '],
-            widths: [dateWidth, nameWidth, 0],
-        }),
-    ]
+export function tagDocs(bucket: TagBucket): DocMeta[] {
+    return [...bucket.docs].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
 }
 
 const tags: Command = {
     name: 'tags',
     description: '标签列表',
     usage: 'tags [标签]',
-    run(ctx, args) {
+    async run(ctx, args) {
         const buckets = tagBuckets(ctx.content.docs)
         const wanted = args[0]
 
@@ -114,7 +93,18 @@ const tags: Command = {
             fail(`没有这个标签：${wanted}`, `可选：${names}`)
         }
 
-        for (const line of tagDocsLines(bucket, ctx.term.cols)) ctx.term.println(line)
+        const docs = tagDocs(bucket)
+        const picked = await select(ctx.term, {
+            title: `${bucket.tag} · ${docs.length} 篇`,
+            labels: { empty: '无内容', footer: '↑↓ 移动 · Enter 打开 · Esc 取消' },
+            items: docs.map((doc) => ({
+                value: doc.slug,
+                label: doc.title,
+                detail: [doc.date, doc.slug].filter(Boolean).join('  '),
+            })),
+        })
+
+        if (picked) await ctx.run(`cat "${picked}"`)
     },
 }
 
