@@ -32,8 +32,16 @@ test('padEnd 按显示宽度补空格', () => {
     assert.equal(padEnd('ab', 4), 'ab  ')
     assert.equal(padEnd('中文', 4), '中文')
     assert.equal(padEnd('中', 4), '中  ')
-    // 带颜色的字符串按可见宽度算，补的空格数量才正确
-    assert.equal(visibleWidth(padEnd('\x1b[36m中\x1b[39m', 6)), 6)
+    // 带颜色的字符串按可见宽度算，补的空格数量才正确（构造字面期望，不依赖 visibleWidth）
+    assert.equal(padEnd('\x1b[36m中\x1b[39m', 6), '\x1b[36m中\x1b[39m    ')
+    // 转义序列不能算进宽度，卡在关键分界点
+    assert.equal(padEnd('\x1b[36m中\x1b[39m', 2), '\x1b[36m中\x1b[39m')
+    assert.equal(padEnd('\x1b[36m中\x1b[39m', 3), '\x1b[36m中\x1b[39m ')
+    // 同样不依赖 visibleWidth：OSC 8 链接也只算可见宽度
+    assert.equal(
+        padEnd('\x1b]8;;https://a\x1b\\b\x1b]8;;\x1b\\', 3),
+        '\x1b]8;;https://a\x1b\\b\x1b]8;;\x1b\\  ',
+    )
 })
 
 test('padEnd 不会截断超长内容', () => {

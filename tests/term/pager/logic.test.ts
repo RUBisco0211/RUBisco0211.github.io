@@ -59,13 +59,24 @@ test('状态栏整行铺满且反显', () => {
 })
 
 test('状态栏显示百分比和行范围', () => {
-    const status = plain(pagerStatus({ title: 't', offset: 0, total: 100, height: 10, cols: 80 }))
-    assert.match(status, /10%/)
-    assert.match(status, /1-10\/100/)
+    const start = plain(pagerStatus({ title: 't', offset: 0, total: 100, height: 10, cols: 40 }))
+    assert.match(start, /10%  ·  1-10\/100$/)
 
-    const end = plain(pagerStatus({ title: 't', offset: 90, total: 100, height: 10, cols: 80 }))
-    assert.match(end, /100%/)
-    assert.match(end, /91-100\/100/)
+    const end = plain(pagerStatus({ title: 't', offset: 90, total: 100, height: 10, cols: 40 }))
+    assert.match(end, /100%  ·  91-100\/100$/)
+})
+
+test('进度不是简单比例：offset+height 超过 total 时封顶 100%', () => {
+    // 100 行内容里翻了 95 行，只显示 6 行：95+6=101 > 100，不能显示 101%
+    assert.match(
+        plain(pagerStatus({ title: 't', offset: 95, total: 100, height: 6, cols: 40 })),
+        /100%  ·  96-100\/100$/,
+    )
+    // 同尺寸内容短于一屏
+    assert.match(
+        plain(pagerStatus({ title: 't', offset: 0, total: 3, height: 10, cols: 40 })),
+        /100%  ·  1-3\/3$/,
+    )
 })
 
 test('内容不足一屏时算 100%', () => {
