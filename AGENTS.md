@@ -28,14 +28,15 @@ src/
   main.ts             装配 + REPL 循环
   config.ts           站点配置：user/host/字体/主题/alias
   storage.ts          localStorage 唯一入口（统一前缀）
-  term/               xterm 封装、ANSI 原语、显示宽度、命令历史
+  render/             ANSI 原语、显示宽度、折行、语法着色、markdown→ANSI
+  term/               xterm 封装、pager/select 整屏组件、命令历史
   shell/              tokenize / alias / registry / fs / path / complete / error / usage
     commands/         一个文件一条命令，自动注册
-  content/            内容树视图、markdown→ANSI 渲染、语法着色、搜索
+  content/            内容树视图、字数格式化、搜索
   theme/              themes/<名字>.ts（每套含 light/dark 两个变体）+ 聚合 + store
 plugins/site-content.ts   content/ → virtual:site-tree
 scripts/
-  build-content.ts   编译器（纯 node，可独立跑）
+  build-content.ts   内容编译器（被 dev 插件和 copy-content 共用）
   copy-content.ts    构建后把 .md 拷进 dist/content/
 tests/                node --test，和 src 分开存放
 ```
@@ -82,7 +83,7 @@ interface Ctx {
 - 参数不足用 `printUsage(command)`，不要硬编码 `用法：…`（会和 `usage` 字段漂移）
 - 错误：命令 `throw` 一个 `ShellError`（或 `fail(...)`），由 `shell.run()` 捕获后交给
   `term.printError()` 统一染红；可选提示用第二参数（如可选值列表）。意外异常不吞，继续抛给 `main.ts` 兜底。
-  错误怎么渲染是终端层的事（`term/format.ts` 的 `formatError`），shell 只给消息和提示。
+  错误怎么渲染是终端层的事（`Term.printError`），shell 只给消息和提示。
 
 ### 3. 命令自动注册
 
@@ -185,7 +186,7 @@ gh api -X PUT repos/RUBisco0211/RUBisco0211.github.io/pages -f build_type=workfl
    `.prettierrc` 已定死：无分号、单引号、printWidth 100。`content/` 不在格式化范围内（手写内容）。
 
 5. **CJK 对齐要用 `visibleWidth()`**
-   按 `text.length` 算会把中文和 ANSI 转义序列一起算错。对齐用 `padEnd()`（在 `src/term/width.ts`）。
+   按 `text.length` 算会把中文和 ANSI 转义序列一起算错。对齐用 `padEnd()`（在 `src/render/width.ts`）。
 
 6. **`clear` 的时机**
    `xterm.clear()` 会让 readline 的 `promptMarker` 失效，只能在两次 `read()` 之间调用。

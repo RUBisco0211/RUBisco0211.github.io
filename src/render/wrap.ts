@@ -11,8 +11,8 @@
  */
 
 import { visibleWidth } from './width.ts'
+import { OSC8_CLOSE, OSC8_OPEN, RESET } from './ansi.ts'
 
-const ESC = '\x1b'
 /** 匹配一整条转义序列：CSI（颜色/光标）或 OSC（超链接） */
 const ESCAPE = /\x1b\[[0-9;]*m|\x1b\]8;;[^\x1b]*\x1b\\/y
 
@@ -37,7 +37,7 @@ function sgrCode(sequence: string): number | undefined {
 
 /** `\x1b]8;;<url>\x1b\\` 是开启，`\x1b]8;;\x1b\\` 是关闭 */
 function isHyperlinkOpen(sequence: string): boolean {
-    return sequence.length > `${ESC}]8;;${ESC}\\`.length
+    return sequence.length > OSC8_CLOSE.length
 }
 
 /** 当前行还开着的样式和链接 */
@@ -47,7 +47,7 @@ interface StyleState {
 }
 
 function pushSequence(state: StyleState, sequence: string): void {
-    if (sequence.startsWith(`${ESC}]8;;`)) {
+    if (sequence.startsWith(OSC8_OPEN)) {
         state.link = isHyperlinkOpen(sequence) ? sequence : undefined
         return
     }
@@ -74,8 +74,8 @@ function reopen(state: StyleState): string {
 }
 
 function closeAll(state: StyleState): string {
-    const tail = state.link ? `${ESC}]8;;${ESC}\\` : ''
-    return tail + (state.codes.length > 0 ? `${ESC}[0m` : '')
+    const tail = state.link ? OSC8_CLOSE : ''
+    return tail + (state.codes.length > 0 ? RESET : '')
 }
 
 /**

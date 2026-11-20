@@ -1,8 +1,8 @@
 import type { DocMeta } from '../../content/types.ts'
-import { bold, cyan, dim, yellow } from '../../term/ansi.ts'
-import { bar } from '../../term/chart.ts'
-import { formatChars, formatCount } from '../../term/format.ts'
-import { padEnd, truncateTo, visibleWidth } from '../../term/width.ts'
+import { bold, cyan, dim, yellow } from '../../render/ansi.ts'
+import { bar } from '../../render/chart.ts'
+import { formatChars, formatCount } from '../../content/format.ts'
+import { padEnd, truncateTo, visibleWidth } from '../../render/width.ts'
 import type { Command } from '../types.ts'
 
 /** 柱状图最多画多宽，以及最少留几格（窄终端下保证还能看出高低） */

@@ -14,6 +14,27 @@
 
 const ESC = '\x1b'
 
+// —— 终端控制（非样式） ——
+
+/** 切到备用屏幕，退出时原屏幕还原 */
+export const ALT_SCREEN_ON = `${ESC}[?1049h`
+export const ALT_SCREEN_OFF = `${ESC}[?1049l`
+export const CURSOR_HIDE = `${ESC}[?25l`
+export const CURSOR_SHOW = `${ESC}[?25h`
+/** 光标回左上角并整屏清空 */
+export const CLEAR_SCREEN = `${ESC}[H${ESC}[2J`
+/** 从光标处擦到行尾 */
+export const ERASE_LINE = `${ESC}[2K`
+export const RESET = `${ESC}[0m`
+export const OSC8_OPEN = `${ESC}]8;;`
+export const OSC8_TERMINATOR = `${ESC}\\`
+export const OSC8_CLOSE = `${OSC8_OPEN}${OSC8_TERMINATOR}`
+
+/** 把光标移到 1-based 的行列 */
+export function moveTo(row: number, col = 1): string {
+    return `${ESC}[${row};${col}H`
+}
+
 export interface Style {
     (text: string): string
     readonly open: string
@@ -30,7 +51,7 @@ function makeStyle(open: string, close: string): Style {
  * 注意它是零宽的：visibleWidth() 会忽略这层包裹，对齐不受影响。
  */
 export function hyperlink(href: string, text: string): string {
-    return `\x1b]8;;${href}\x1b\\${text}\x1b]8;;\x1b\\`
+    return `${OSC8_OPEN}${href}${OSC8_TERMINATOR}${text}${OSC8_CLOSE}`
 }
 
 // —— 字重与装饰 ——

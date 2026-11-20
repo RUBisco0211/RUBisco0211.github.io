@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { padEnd, stripAnsi, truncateTo, visibleWidth } from '../../src/term/width.ts'
+import { padEnd, stripAnsi, truncateTo, visibleWidth } from '../../src/render/width.ts'
 
 test('ASCII 按字符数算', () => {
     assert.equal(visibleWidth('abc'), 3)

@@ -1,7 +1,7 @@
 import type { DocMeta } from '../../content/types.ts'
-import { blue, bold, dim, hyperlink } from '../../term/ansi.ts'
-import { formatChars } from '../../term/format.ts'
-import { padEnd, visibleWidth } from '../../term/width.ts'
+import { blue, bold, dim, hyperlink } from '../../render/ansi.ts'
+import { formatChars } from '../../content/format.ts'
+import { padEnd, visibleWidth } from '../../render/width.ts'
 import type { Command } from '../types.ts'
 
 export type InfoLine =

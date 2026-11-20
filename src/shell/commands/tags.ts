@@ -1,7 +1,7 @@
 import type { DocMeta } from '../../content/types.ts'
-import { bold, cyan, dim, yellow } from '../../term/ansi.ts'
-import { bar } from '../../term/chart.ts'
-import { padEnd, truncateTo, visibleWidth } from '../../term/width.ts'
+import { bold, cyan, dim, yellow } from '../../render/ansi.ts'
+import { bar } from '../../render/chart.ts'
+import { padEnd, truncateTo, visibleWidth } from '../../render/width.ts'
 import { fail } from '../error.ts'
 import type { Command } from '../types.ts'
 

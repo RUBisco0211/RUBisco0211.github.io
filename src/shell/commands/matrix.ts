@@ -1,10 +1,15 @@
-import { brightGreen, dim, green } from '../../term/ansi.ts'
+import {
+    ALT_SCREEN_OFF,
+    ALT_SCREEN_ON,
+    CLEAR_SCREEN,
+    CURSOR_HIDE,
+    CURSOR_SHOW,
+    brightGreen,
+    dim,
+    green,
+    moveTo,
+} from '../../render/ansi.ts'
 import type { Command } from '../types.ts'
-
-const ALT_SCREEN_ON = '\x1b[?1049h'
-const ALT_SCREEN_OFF = '\x1b[?1049l'
-const HIDE_CURSOR = '\x1b[?25l'
-const SHOW_CURSOR = '\x1b[?25h'
 
 /** 帧间隔（毫秒），越小雨越快 */
 const FRAME_MS = 70
@@ -91,13 +96,13 @@ const matrix: Command = {
         let columns = Array.from({ length: width }, () => makeColumn(rows))
         let timer: ReturnType<typeof setTimeout> | undefined
 
-        term.write(`${ALT_SCREEN_ON}${HIDE_CURSOR}\x1b[H\x1b[2J`)
+        term.write(`${ALT_SCREEN_ON}${CURSOR_HIDE}${CLEAR_SCREEN}`)
 
         return new Promise<void>((resolve) => {
             const finish = (): void => {
                 clearTimeout(timer)
                 release()
-                term.write(`${SHOW_CURSOR}${ALT_SCREEN_OFF}`)
+                term.write(`${CURSOR_SHOW}${ALT_SCREEN_OFF}`)
                 resolve()
             }
 
@@ -110,19 +115,19 @@ const matrix: Command = {
                     // 尾巴末端的下一格要擦掉，否则会留一条不动的痕
                     const clearRow = Math.floor(next.head) - next.length
                     if (clearRow >= 0 && clearRow < rows) {
-                        parts.push(`\x1b[${clearRow + 1};${index * 2 + 1}H `)
+                        parts.push(`${moveTo(clearRow + 1, index * 2 + 1)} `)
                     }
 
                     for (const cell of columnCells(next, rows)) {
                         parts.push(
-                            `\x1b[${cell.row + 1};${index * 2 + 1}H${style(cell.level, cell.char)}`,
+                            `${moveTo(cell.row + 1, index * 2 + 1)}${style(cell.level, cell.char)}`,
                         )
                     }
 
                     // 整个头都掉出屏幕了，清掉整列再从头开始
                     if (isDone(next, rows)) {
                         for (let row = 0; row < rows; row += 1) {
-                            parts.push(`\x1b[${row + 1};${index * 2 + 1}H `)
+                            parts.push(`${moveTo(row + 1, index * 2 + 1)} `)
                         }
                         return makeColumn(rows)
                     }

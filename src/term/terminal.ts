@@ -4,8 +4,8 @@ import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Readline } from 'xterm-readline'
 import type { History } from 'xterm-readline/lib/history.js'
+import { dim, red } from '../render/ansi.ts'
 import { SiteHistory } from './history.ts'
-import { formatError } from './format.ts'
 import '@xterm/xterm/css/xterm.css'
 
 export interface TermOptions {
@@ -173,7 +173,8 @@ export class Term {
      * 错误长什么样式是终端的事，上层只管把异常和提示交过来。
      */
     printError(error: unknown, hint?: string): void {
-        this.println(formatError(error, hint))
+        const message = error instanceof Error ? error.message : String(error)
+        this.println(hint ? `${red(message)}${dim(`  ${hint}`)}` : red(message))
     }
 
     print(text: string): void {

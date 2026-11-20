@@ -1,6 +1,6 @@
 import { searchDocs } from '../../content/search.ts'
 import { printUsage } from '../usage.ts'
-import { cyan, dim, gray } from '../../term/ansi.ts'
+import { cyan, dim, gray } from '../../render/ansi.ts'
 import type { Command } from '../types.ts'
 
 const search: Command = {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { markMatches, matchesQuery } from '../../src/term/mark.ts'
-import { stripAnsi } from '../../src/term/width.ts'
+import { markMatches, matchesQuery } from '../../src/render/mark.ts'
+import { stripAnsi } from '../../src/render/width.ts'
 
 test('没有关键字时原样返回', () => {
     const line = '\x1b[36mls blog\x1b[39m'

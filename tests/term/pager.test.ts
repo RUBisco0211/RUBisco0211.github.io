@@ -7,7 +7,7 @@ import {
     pagerStatus,
     wheelLines,
 } from '../../src/term/pager.ts'
-import { visibleWidth } from '../../src/term/width.ts'
+import { visibleWidth } from '../../src/render/width.ts'
 
 const plain = (text: string): string => text.replace(/\x1b\[[0-9;]*m/g, '')
 

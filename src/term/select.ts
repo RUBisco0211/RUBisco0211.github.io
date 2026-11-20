@@ -1,6 +1,16 @@
-import { bold, cyan, dim } from './ansi.ts'
+import {
+    ALT_SCREEN_OFF,
+    ALT_SCREEN_ON,
+    CLEAR_SCREEN,
+    ERASE_LINE,
+    bold,
+    cyan,
+    dim,
+    moveTo,
+} from '../render/ansi.ts'
+import { resolveKeys, type Keymap } from './keys.ts'
 import type { Term } from './terminal.ts'
-import { truncateTo } from './width.ts'
+import { truncateTo } from '../render/width.ts'
 
 export interface SelectItem<T> {
     readonly value: T
@@ -8,8 +18,26 @@ export interface SelectItem<T> {
     readonly detail?: string
 }
 
+export type SelectAction = 'up' | 'down' | 'confirm' | 'cancel'
+
+/** 默认键位只在组件内部用，调用方只传覆盖项 */
+const DEFAULT_KEYS: Keymap<SelectAction> = {
+    up: ['ArrowUp', 'k'],
+    down: ['ArrowDown', 'j'],
+    confirm: ['Enter'],
+    cancel: ['Escape', 'q'],
+}
+
+export interface SelectLabels {
+    /** 列表为空时底部的占位文本 */
+    readonly empty: string
+    /** 底部操作提示，文案由调用方按自己的键位写 */
+    readonly footer: string
+}
+
 export interface SelectOptions<T> {
     readonly title: string
+    readonly labels: SelectLabels
     /** 允许输入关键字筛选（打开后 Esc 才是唯一取消键，q 变成普通字符） */
     readonly filterable?: boolean
     readonly items: readonly SelectItem<T>[]
@@ -18,6 +46,8 @@ export interface SelectOptions<T> {
     readonly initial?: number
     /** 光标移动时回调，用来做实时预览 */
     readonly onHighlight?: (item: SelectItem<T>, index: number) => void
+    /** 键位覆盖，按动作替换默认值 */
+    readonly keys?: Partial<Keymap<SelectAction>>
 }
 
 /** 按 label + detail 做子串筛选，忽略大小写 */
@@ -55,6 +85,7 @@ export function select<T>(term: Term, options: SelectOptions<T>): Promise<T | un
     const rows = term.rows
     const cols = term.cols
     const visible = Math.max(1, rows - 3)
+    const keymap = resolveKeys(DEFAULT_KEYS, options.keys)
 
     let query = ''
     let items = options.items
@@ -66,7 +97,7 @@ export function select<T>(term: Term, options: SelectOptions<T>): Promise<T | un
 
         const parts: string[] = []
         const put = (row: number, text: string): void => {
-            parts.push(`\x1b[${row + 1};1H\x1b[2K${truncateTo(text, cols)}`)
+            parts.push(`${moveTo(row + 1)}${ERASE_LINE}${truncateTo(text, cols)}`)
         }
 
         const heading = query === '' ? options.title : `${options.title} · ${query}`
@@ -86,12 +117,12 @@ export function select<T>(term: Term, options: SelectOptions<T>): Promise<T | un
             put(line + 1, ` ${marker} ${label}${detail}`)
         }
 
-        const position = items.length === 0 ? '无匹配' : `${index + 1}/${items.length}`
-        put(rows - 1, dim(`${position}　↑↓ 移动　Enter 确认　Esc 取消`))
+        const position = items.length === 0 ? options.labels.empty : `${index + 1}/${items.length}`
+        put(rows - 1, dim(`${position}　${options.labels.footer}`))
         term.write(parts.join(''))
     }
 
-    term.write('\x1b[?1049h\x1b[H\x1b[2J')
+    term.write(`${ALT_SCREEN_ON}${CLEAR_SCREEN}`)
     draw()
     const initialItem = items[index]
     if (initialItem) options.onHighlight?.(initialItem, index)
@@ -99,7 +130,7 @@ export function select<T>(term: Term, options: SelectOptions<T>): Promise<T | un
     return new Promise((resolve) => {
         const finish = (result: SelectItem<T> | undefined): void => {
             release()
-            term.write('\x1b[?1049l')
+            term.write(ALT_SCREEN_OFF)
             resolve(result?.value)
         }
 
@@ -124,22 +155,7 @@ export function select<T>(term: Term, options: SelectOptions<T>): Promise<T | un
         }
 
         const release = term.captureKeys((event) => {
-            switch (event.key) {
-                case 'Enter':
-                    finish(items[index])
-                    return
-                case 'Escape':
-                    finish(undefined)
-                    return
-                case 'ArrowUp':
-                    move(-1)
-                    return
-                case 'ArrowDown':
-                    move(1)
-                    return
-            }
-
-            // 可筛选时不占用字母键做移动，q 也不能当取消
+            // 可筛选时，可打印字符先给筛选框（j/k/q 也不例外）
             if (options.filterable) {
                 if (event.key === 'Backspace') {
                     refilter(query.slice(0, -1))
@@ -147,13 +163,24 @@ export function select<T>(term: Term, options: SelectOptions<T>): Promise<T | un
                 }
                 if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
                     refilter(query + event.key)
+                    return
                 }
-                return
             }
 
-            if (event.key === 'q') finish(undefined)
-            else if (event.key === 'k') move(-1)
-            else if (event.key === 'j') move(1)
+            switch (keymap.get(event.key)) {
+                case 'confirm':
+                    finish(items[index])
+                    return
+                case 'cancel':
+                    finish(undefined)
+                    return
+                case 'up':
+                    move(-1)
+                    return
+                case 'down':
+                    move(1)
+                    return
+            }
         })
     })
 }

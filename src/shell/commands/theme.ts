@@ -1,4 +1,4 @@
-import { green } from '../../term/ansi.ts'
+import { green } from '../../render/ansi.ts'
 import { select } from '../../term/select.ts'
 import { fail } from '../error.ts'
 import type { Command, Ctx } from '../types.ts'
@@ -10,6 +10,10 @@ async function pick(ctx: Ctx): Promise<void> {
 
     const picked = await select(ctx.term, {
         title: '选择主题',
+        labels: {
+            empty: '无匹配',
+            footer: '↑↓ 移动 · Enter 确认 · Esc 取消',
+        },
         hint: `${ctx.theme.mode()} · 深浅跟随系统`,
         initial: Math.max(0, names.indexOf(original)),
         items: names.map((name) => ({ value: name, label: name })),

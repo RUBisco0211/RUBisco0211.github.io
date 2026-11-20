@@ -1,4 +1,4 @@
-import { bold, dim } from './term/ansi.ts'
+import { bold, dim } from './render/ansi.ts'
 
 export interface SiteConfig {
     user: string

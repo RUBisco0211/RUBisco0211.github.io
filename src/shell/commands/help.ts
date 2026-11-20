@@ -1,5 +1,5 @@
-import { bold, cyan, dim } from '../../term/ansi.ts'
-import { padEnd, visibleWidth } from '../../term/width.ts'
+import { bold, cyan, dim } from '../../render/ansi.ts'
+import { padEnd, visibleWidth } from '../../render/width.ts'
 import { fail } from '../error.ts'
 import type { Command } from '../types.ts'
 

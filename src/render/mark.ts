@@ -5,12 +5,10 @@
  * 建立「可见字符下标 → 原始下标」的映射，再按映射插反显码。
  */
 
+import { inverse } from './ansi.ts'
 import { stripAnsi } from './width.ts'
 
 const ESCAPE = /\x1b\[[0-9;]*m|\x1b\]8;;[^\x1b]*\x1b\\/y
-
-const INVERSE_ON = '\x1b[7m'
-const INVERSE_OFF = '\x1b[27m'
 
 /** 可见文本 + 每个可见字符对应的原始下标 */
 function splitAnsi(line: string): { plain: string; map: number[] } {
@@ -58,7 +56,7 @@ export function markMatches(line: string, query: string): string {
         const endAt = at + target.length
         const end = endAt < map.length ? map[endAt]! : line.length
 
-        parts.push(line.slice(raw, start), INVERSE_ON, line.slice(start, end), INVERSE_OFF)
+        parts.push(line.slice(raw, start), inverse.open, line.slice(start, end), inverse.close)
         raw = end
         from = endAt
     }

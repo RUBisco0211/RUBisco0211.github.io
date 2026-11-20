@@ -1,4 +1,4 @@
-import { dim, green } from '../../term/ansi.ts'
+import { dim, green } from '../../render/ansi.ts'
 import { select } from '../../term/select.ts'
 import type { Command } from '../types.ts'
 
@@ -23,6 +23,10 @@ const history: Command = {
 
         const picked = await select(ctx.term, {
             title: `历史 ${entries.length} 条`,
+            labels: {
+                empty: '无匹配',
+                footer: '↑↓ 移动 · Enter 回填 · Esc 取消',
+            },
             hint: '输入关键字筛选',
             filterable: true,
             items: entries.map((text) => ({ value: text, label: text })),

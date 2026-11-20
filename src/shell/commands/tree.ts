@@ -1,4 +1,4 @@
-import { cyan } from '../../term/ansi.ts'
+import { cyan } from '../../render/ansi.ts'
 import { completePath } from '../complete.ts'
 import { fail } from '../error.ts'
 import { getNode, lookup, type Fs } from '../fs.ts'

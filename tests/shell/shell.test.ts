@@ -8,7 +8,6 @@ import history from '../../src/shell/commands/history.ts'
 import { buildFs } from '../../src/shell/fs.ts'
 import { ShellError } from '../../src/shell/error.ts'
 import { createShell, type ShellDeps } from '../../src/shell/index.ts'
-import { formatError } from '../../src/term/format.ts'
 import type { Command } from '../../src/shell/types.ts'
 import type { Term } from '../../src/term/terminal.ts'
 import type { ThemeStore } from '../../src/theme/store.ts'
@@ -42,12 +41,11 @@ const fakeTheme: ThemeStore = {
 }
 
 function setup(aliases: Record<string, string> = {}, extra: readonly Command[] = []) {
-    const lines: string[] = []
     const keys = { next: 'Escape' }
     let historyEntries: string[] = []
     const term = {
-        println: (text = '') => void lines.push(text),
-        printError: (error: unknown, hint?: string) => void lines.push(formatError(error, hint)),
+        println: () => {},
+        printError: () => {},
         write: () => {},
         cols: 80,
         rows: 24,

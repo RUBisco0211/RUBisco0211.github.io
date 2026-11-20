@@ -5,14 +5,14 @@
  * 链接保留文字（OSC 8 可点）、图片做成可点链接、表格按列宽折行对齐。
  *
  * 不折行 —— xterm 自己会按列宽折，自己算折行还要处理 CJK 宽度，不值。
- * 颜色全部走 term/ansi.ts，跟着主题走。
+ * 颜色全部走 render/ansi.ts，跟着主题走。
  */
 
 import { marked } from 'marked'
 import type { Token, Tokens } from 'marked'
-import { blue, bold, cyan, dim, hyperlink, italic, magenta, yellow } from '../term/ansi.ts'
-import { wrapAnsi } from '../term/wrap.ts'
-import { padEnd, stripAnsi, visibleWidth } from '../term/width.ts'
+import { blue, bold, cyan, dim, hyperlink, italic, magenta, yellow } from './ansi.ts'
+import { wrapAnsi } from './wrap.ts'
+import { padEnd, stripAnsi, visibleWidth } from './width.ts'
 import { highlightCode, normalizeLang } from './highlight.ts'
 
 const link = (href: string, text: string): string => hyperlink(href, blue(text))

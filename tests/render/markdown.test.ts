@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { headingTitles, renderMarkdown } from '../../src/content/render.ts'
-import { visibleWidth } from '../../src/term/width.ts'
+import { headingTitles, renderMarkdown } from '../../src/render/markdown.ts'
+import { visibleWidth } from '../../src/render/width.ts'
 
 /** 去掉 ANSI 和 OSC 8，只看文字 */
 const plain = (text: string): string =>

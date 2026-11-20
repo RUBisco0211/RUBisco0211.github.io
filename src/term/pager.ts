@@ -1,12 +1,33 @@
-import { inverse } from './ansi.ts'
-import { markMatches, matchesQuery } from './mark.ts'
+import {
+    ALT_SCREEN_OFF,
+    ALT_SCREEN_ON,
+    CLEAR_SCREEN,
+    ERASE_LINE,
+    cyan,
+    inverse,
+    moveTo,
+} from '../render/ansi.ts'
+import { markMatches, matchesQuery } from '../render/mark.ts'
 import { clampWindow } from './select.ts'
+import { resolveKeys, type Keymap } from './keys.ts'
 import type { Term } from './terminal.ts'
-import { padEnd, stripAnsi, truncateTo, visibleWidth } from './width.ts'
-import { wrapAnsi } from './wrap.ts'
+import { padEnd, stripAnsi, truncateTo, visibleWidth } from '../render/width.ts'
+import { wrapAnsi } from '../render/wrap.ts'
+
+export interface PagerLabels {
+    /** 目录模式的标题，拼在文档标题后面 */
+    readonly outline: string
+    /** 目录模式的操作提示 */
+    readonly outlineHints: readonly string[]
+    /** 搜索无匹配时的状态文本 */
+    readonly noMatch: (query: string) => string
+    /** 浏览模式的操作提示，按重要性从低到高 */
+    readonly hints?: readonly string[]
+}
 
 export interface PagerInput {
     readonly title: string
+    readonly labels: PagerLabels
     /**
      * 给定列宽产出未折行的内容（可含 ANSI）。
      * 折行由 pager 自己做，所以视口变宽变窄时只要重新调一次这个函数。
@@ -14,10 +35,45 @@ export interface PagerInput {
     readonly render: (cols: number) => readonly string[]
     /** 标题列表，按 `t` 可以跳过去 */
     readonly outline?: readonly string[]
+    /** 键位覆盖，按动作替换默认值 */
+    readonly keys?: Partial<Keymap<PagerAction>>
 }
 
-const ALT_SCREEN_ON = '\x1b[?1049h'
-const ALT_SCREEN_OFF = '\x1b[?1049l'
+export type PagerAction =
+    | 'quit'
+    | 'cancel'
+    | 'confirm'
+    | 'search'
+    | 'next'
+    | 'prev'
+    | 'outline'
+    | 'down'
+    | 'up'
+    | 'pageDown'
+    | 'pageUp'
+    | 'halfDown'
+    | 'halfUp'
+    | 'top'
+    | 'bottom'
+
+/** 默认键位只在组件内部用，调用方只传覆盖项 */
+const DEFAULT_KEYS: Keymap<PagerAction> = {
+    quit: ['q'],
+    cancel: ['Escape'],
+    confirm: ['Enter'],
+    search: ['/'],
+    next: ['n'],
+    prev: ['N'],
+    outline: ['t'],
+    down: ['j', 'ArrowDown'],
+    up: ['k', 'ArrowUp'],
+    pageDown: [' ', 'f', 'PageDown'],
+    pageUp: ['b', 'PageUp'],
+    halfDown: ['d'],
+    halfUp: ['u'],
+    top: ['g', 'Home'],
+    bottom: ['G', 'End'],
+}
 
 /** 多少像素算一行。鼠标滚轮一格约 100px，所以一格 ≈ 1.25 行 */
 const PIXELS_PER_LINE = 80
@@ -119,8 +175,8 @@ export function pagerStatus(options: StatusOptions): string {
     )
     const position = `${offset + 1}-${Math.min(offset + height, total)}/${total}`
 
-    // 默认至少留一条退出的提示
-    const hints = [...(options.hints ?? ['q 退出'])]
+    // 提示由调用方提供，放不下就先从头部丢
+    const hints = [...(options.hints ?? [])]
     const buildRight = (): string =>
         [options.extra, `${percent}%  ·  ${position}`, ...hints].filter(Boolean).join('  ·  ')
 
@@ -148,6 +204,7 @@ export function pagerStatus(options: StatusOptions): string {
  * 视口变化时会按新宽度重新渲染并重画（alt buffer 不 reflow，必须整屏重来）。
  */
 export function runPager(term: Term, input: PagerInput): Promise<void> {
+    const keymap = resolveKeys(DEFAULT_KEYS, input.keys)
     let cols = term.cols
     let rows = term.rows
     let height = Math.max(1, rows - 1)
@@ -193,7 +250,7 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
         for (let row = 0; row < height; row += 1) {
             const line = lines[offset + row] ?? ''
             const shown = query === '' ? line : markMatches(line, query)
-            parts.push(`\x1b[${row + 1};1H\x1b[2K${shown}`)
+            parts.push(`${moveTo(row + 1)}${ERASE_LINE}${shown}`)
         }
         return parts
     }
@@ -206,15 +263,13 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
             const index = outlineOffset + row
             const title = titles[index]
             if (title === undefined) {
-                parts.push(`\x1b[${row + 1};1H\x1b[2K`)
+                parts.push(`${moveTo(row + 1)}${ERASE_LINE}`)
                 continue
             }
             const active = index === outlineCursor
-            const marker = active ? '\x1b[36m>\x1b[39m' : ' '
-            const label = active
-                ? `\x1b[36m${truncateTo(title, cols - 4)}\x1b[39m`
-                : truncateTo(title, cols - 4)
-            parts.push(`\x1b[${row + 1};1H\x1b[2K ${marker} ${label}`)
+            const marker = active ? cyan('>') : ' '
+            const label = active ? cyan(truncateTo(title, cols - 4)) : truncateTo(title, cols - 4)
+            parts.push(`${moveTo(row + 1)}${ERASE_LINE} ${marker} ${label}`)
         }
 
         return parts
@@ -224,25 +279,20 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
         if (mode === 'search') return inverse(padEnd(`/${typing}`, cols))
         if (mode === 'outline') {
             return pagerStatus({
-                title: `${input.title} · 目录`,
+                title: `${input.title} · ${input.labels.outline}`,
                 offset: outlineCursor,
                 total: Math.max(1, titles.length),
                 height: 1,
                 cols,
-                hints: ['↑↓ 选择', 'Enter 跳转', 'Esc 取消'],
+                hints: input.labels.outlineHints,
             })
         }
         const extra =
             query === ''
                 ? ''
                 : matches.length === 0
-                  ? `/${query} 无匹配`
+                  ? input.labels.noMatch(query)
                   : `/${query} ${matchIndex + 1}/${matches.length}`
-
-        // 从低到高：窄终端会先丢掉前面几个
-        const hints = ['j/k 行', '空格 翻页']
-        if (titles.length > 0) hints.push('t 目录')
-        hints.push('/ 搜索', 'q 退出')
 
         return pagerStatus({
             title: input.title,
@@ -251,13 +301,13 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
             height,
             cols,
             extra,
-            hints,
+            hints: input.labels.hints,
         })
     }
 
     const draw = (): void => {
         const parts = mode === 'outline' ? drawOutline() : drawBody()
-        parts.push(`\x1b[${rows};1H\x1b[2K${statusLine()}`)
+        parts.push(`${moveTo(rows)}${ERASE_LINE}${statusLine()}`)
         term.write(parts.join(''))
     }
 
@@ -280,7 +330,7 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
 
     rebuild()
 
-    term.write(`${ALT_SCREEN_ON}\x1b[H\x1b[2J`)
+    term.write(`${ALT_SCREEN_ON}${CLEAR_SCREEN}`)
     draw()
 
     // 视口变了就重排。xterm 的 alt buffer 不会 reflow，所以必须整屏重画
@@ -308,19 +358,19 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
         }
 
         const handleSearchKey = (event: KeyboardEvent): boolean => {
-            if (event.key === 'Enter') {
-                query = typing
-                recalcMatches()
-                mode = 'browse'
-                if (matches.length > 0) gotoMatch(matches.findIndex((line) => line >= offset))
-                else draw()
-                return true
-            }
-            if (event.key === 'Escape') {
-                mode = 'browse'
-                typing = ''
-                draw()
-                return true
+            switch (keymap.get(event.key)) {
+                case 'confirm':
+                    query = typing
+                    recalcMatches()
+                    mode = 'browse'
+                    if (matches.length > 0) gotoMatch(matches.findIndex((line) => line >= offset))
+                    else draw()
+                    return true
+                case 'cancel':
+                    mode = 'browse'
+                    typing = ''
+                    draw()
+                    return true
             }
             if (event.key === 'Backspace') {
                 typing = typing.slice(0, -1)
@@ -336,26 +386,24 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
         }
 
         const handleOutlineKey = (event: KeyboardEvent): boolean => {
-            switch (event.key) {
-                case 'ArrowUp':
-                case 'k':
+            switch (keymap.get(event.key)) {
+                case 'up':
                     outlineCursor = Math.max(0, outlineCursor - 1)
                     draw()
                     return true
-                case 'ArrowDown':
-                case 'j':
+                case 'down':
                     outlineCursor = Math.min(titles.length - 1, outlineCursor + 1)
                     draw()
                     return true
-                case 'Enter': {
+                case 'confirm': {
                     const target = outlineAt[outlineCursor]
                     mode = 'browse'
                     if (target !== undefined && target >= 0) scrollTo(target)
                     draw()
                     return true
                 }
-                case 'Escape':
-                case 'q':
+                case 'cancel':
+                case 'quit':
                     mode = 'browse'
                     draw()
                     return true
@@ -364,11 +412,11 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
         }
 
         const handleBrowseKey = (event: KeyboardEvent): boolean => {
-            switch (event.key) {
-                case 'q':
+            switch (keymap.get(event.key)) {
+                case 'quit':
                     quit()
                     return true
-                case 'Escape':
+                case 'cancel':
                     // 有搜索就先把搜索清掉，再按一次才退出
                     if (query !== '') {
                         query = ''
@@ -379,18 +427,18 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
                     }
                     quit()
                     return true
-                case '/':
+                case 'search':
                     mode = 'search'
                     typing = query
                     draw()
                     return true
-                case 'n':
+                case 'next':
                     if (matches.length > 0) gotoMatch(matchIndex + 1)
                     return true
-                case 'N':
+                case 'prev':
                     if (matches.length > 0) gotoMatch(matchIndex - 1)
                     return true
-                case 't':
+                case 'outline':
                     if (titles.length > 0) {
                         mode = 'outline'
                         outlineCursor = 0
@@ -398,35 +446,28 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
                         draw()
                     }
                     return true
-                case 'j':
-                case 'ArrowDown':
+                case 'down':
                     scrollTo(offset + 1)
                     return true
-                case 'k':
-                case 'ArrowUp':
+                case 'up':
                     scrollTo(offset - 1)
                     return true
-                case ' ':
-                case 'f':
-                case 'PageDown':
+                case 'pageDown':
                     scrollTo(offset + height)
                     return true
-                case 'b':
-                case 'PageUp':
+                case 'pageUp':
                     scrollTo(offset - height)
                     return true
-                case 'd':
+                case 'halfDown':
                     scrollTo(offset + Math.floor(height / 2))
                     return true
-                case 'u':
+                case 'halfUp':
                     scrollTo(offset - Math.floor(height / 2))
                     return true
-                case 'g':
-                case 'Home':
+                case 'top':
                     scrollTo(0)
                     return true
-                case 'G':
-                case 'End':
+                case 'bottom':
                     scrollTo(lines.length)
                     return true
             }
