@@ -1,5 +1,6 @@
-import { cyan, red } from '../../term/ansi.ts'
+import { cyan } from '../../term/ansi.ts'
 import { completePath } from '../complete.ts'
+import { fail } from '../error.ts'
 import { getNode, lookup, type Fs } from '../fs.ts'
 import { displayPath, normalize } from '../path.ts'
 import type { Command } from '../types.ts'
@@ -48,8 +49,7 @@ const tree: Command = {
         const found = lookup(ctx.fs, ctx.cwd, target)
 
         if (found.kind === 'missing') {
-            ctx.term.println(red(`没有这个路径：${target}`))
-            return
+            fail(`没有这个路径：${target}`)
         }
 
         if (found.kind === 'file') {

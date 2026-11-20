@@ -1,5 +1,6 @@
-import { bold, cyan, dim, red } from '../../term/ansi.ts'
+import { bold, cyan, dim } from '../../term/ansi.ts'
 import { padEnd, visibleWidth } from '../../term/width.ts'
+import { fail } from '../error.ts'
 import type { Command } from '../types.ts'
 
 const help: Command = {
@@ -13,8 +14,7 @@ const help: Command = {
         if (wanted) {
             const command = ctx.registry.get(wanted)
             if (!command) {
-                ctx.term.println(red(`没有这个命令：${wanted}`))
-                return
+                fail(`没有这个命令：${wanted}`)
             }
             ctx.term.println(`${bold(command.name)}  ${command.description}`)
             if (command.usage) ctx.term.println(dim(`用法：${command.usage}`))

@@ -5,6 +5,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Readline } from 'xterm-readline'
 import type { History } from 'xterm-readline/lib/history.js'
 import { SiteHistory } from './history.ts'
+import { formatError } from './format.ts'
 import '@xterm/xterm/css/xterm.css'
 
 export interface TermOptions {
@@ -164,6 +165,15 @@ export class Term {
     /** 写一行（自动补换行），走 readline 的通道以保持它的光标记账正确。 */
     println(text = ''): void {
         this.readline.println(text)
+    }
+
+    /**
+     * 输出一行错误：红字，可选提示（如可选值列表）压暗跟在后面。
+     *
+     * 错误长什么样式是终端的事，上层只管把异常和提示交过来。
+     */
+    printError(error: unknown, hint?: string): void {
+        this.println(formatError(error, hint))
     }
 
     print(text: string): void {

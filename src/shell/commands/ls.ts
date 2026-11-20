@@ -1,7 +1,8 @@
-import { cyan, dim, green, red, yellow } from '../../term/ansi.ts'
+import { cyan, dim, green, yellow } from '../../term/ansi.ts'
 import { formatCount } from '../../term/format.ts'
 import { padEnd, visibleWidth } from '../../term/width.ts'
 import { completePath } from '../complete.ts'
+import { fail } from '../error.ts'
 import { lookup, type FileEntry } from '../fs.ts'
 import type { Command } from '../types.ts'
 
@@ -78,8 +79,7 @@ const ls: Command = {
         const found = lookup(ctx.fs, ctx.cwd, target)
 
         if (found.kind === 'missing') {
-            ctx.term.println(red(`没有这个路径：${target}`))
-            return
+            fail(`没有这个路径：${target}`)
         }
 
         // 指向单个文件时只打它自己那一行，不带表头

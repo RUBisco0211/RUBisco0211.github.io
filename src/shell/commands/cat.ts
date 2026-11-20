@@ -9,8 +9,6 @@ const cat: Command = {
     complete: (ctx, _argv, current) => completePath(ctx, current),
     async run(ctx, args) {
         const resolved = await resolveDoc(ctx, cat, args)
-        if (!resolved) return
-
         const { doc, text } = resolved
 
         // [NOTE] markdown 渲染器和 pager 只有 cat 用得上，按需加载以减轻首屏加载压力

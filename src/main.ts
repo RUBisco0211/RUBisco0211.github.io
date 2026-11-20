@@ -11,7 +11,7 @@ import { highlightLine } from './shell/highlight-line.ts'
 import { createShell } from './shell/index.ts'
 import { displayPath } from './shell/path.ts'
 import { padEnd, visibleWidth } from './term/width.ts'
-import { blue, dim, green, red } from './term/ansi.ts'
+import { blue, dim, green } from './term/ansi.ts'
 import { Term } from './term/terminal.ts'
 import { findTheme } from './theme/index.ts'
 import { createThemeStore } from './theme/store.ts'
@@ -106,8 +106,7 @@ async function loop(): Promise<void> {
         try {
             await shell.run(line)
         } catch (error) {
-            const message = error instanceof Error ? error.message : String(error)
-            term.println(red(message))
+            term.printError(error)
         }
     }
 }
@@ -121,7 +120,7 @@ async function boot(): Promise<void> {
     try {
         for (const cmd of startups) await shell.run(cmd)
     } catch (error) {
-        term.println(red(error instanceof Error ? error.message : String(error)))
+        term.printError(error)
     }
 
     await loop()

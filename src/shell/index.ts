@@ -1,9 +1,9 @@
 import type { SiteConfig } from '../config.ts'
 import type { ContentStore } from '../content/store.ts'
-import { red } from '../term/ansi.ts'
 import type { Term } from '../term/terminal.ts'
 import type { ThemeStore } from '../theme/store.ts'
 import { createAliasExpander, type AliasTable } from './alias.ts'
+import { fail, ShellError } from './error.ts'
 import { lookup, type Fs } from './fs.ts'
 import { createRegistry } from './registry.ts'
 import { tokenize } from './tokenize.ts'
@@ -28,9 +28,7 @@ export interface Shell {
 }
 
 /**
- * shell 本体：拆词 → alias 展开 → 查命令 → 执行。
- *
- * 没有管道、没有重定向、没有退出码。唯一的可变状态是 cwd。
+ * shell 本体：tokenize, alias 展开，查表，执行
  */
 export function createShell(deps: ShellDeps): Shell {
     const registry = createRegistry(deps.commands)
@@ -38,6 +36,7 @@ export function createShell(deps: ShellDeps): Shell {
     let cwd = '/'
     let prefill = ''
 
+    // 构建上下文对象
     const ctx: Ctx = {
         term: deps.term,
         theme: deps.theme,
@@ -65,17 +64,24 @@ export function createShell(deps: ShellDeps): Shell {
     }
 
     async function run(line: string): Promise<void> {
+        // tokenize 并展开 alias
         const argv = expand(tokenize(line))
         const [head, ...args] = argv
         if (head === undefined) return
 
-        const command = registry.get(head)
-        if (!command) {
-            deps.term.println(red(`没有这个命令：${head}`))
-            return
-        }
+        // ShellError 是给用户看的（参数错、路径不存在…），统一交给终端染红；
+        // 其他异常是代码 bug，交给 main 兜底，不要静默吞掉
+        try {
+            // 查表匹配命令
+            const command = registry.get(head)
+            if (!command) fail(`没有这个命令：${head}`)
 
-        await command.run(ctx, args)
+            // 执行命令
+            await command.run(ctx, args)
+        } catch (error) {
+            if (!(error instanceof ShellError)) throw error
+            deps.term.printError(error.message, error.hint)
+        }
     }
 
     return {

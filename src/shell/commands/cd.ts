@@ -1,5 +1,5 @@
 import { completePath } from '../complete.ts'
-import { red } from '../../term/ansi.ts'
+import { fail } from '../error.ts'
 import type { Command } from '../types.ts'
 
 const cd: Command = {
@@ -9,7 +9,7 @@ const cd: Command = {
     complete: (ctx, _argv, current) => completePath(ctx, current),
     run(ctx, args) {
         const error = ctx.chdir(args[0] ?? '/')
-        if (error) ctx.term.println(red(error))
+        if (error) fail(error)
     },
 }
 

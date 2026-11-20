@@ -9,10 +9,7 @@ const search: Command = {
     usage: 'search <词…>',
     async run(ctx, args) {
         const query = args.join(' ').trim()
-        if (!query) {
-            printUsage(ctx, search)
-            return
-        }
+        if (!query) printUsage(search)
 
         const hits = await searchDocs(ctx.content, query)
         if (hits.length === 0) {

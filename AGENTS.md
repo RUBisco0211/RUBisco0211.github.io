@@ -29,7 +29,7 @@ src/
   config.ts           站点配置：user/host/字体/主题/alias
   storage.ts          localStorage 唯一入口（统一前缀）
   term/               xterm 封装、ANSI 原语、显示宽度、命令历史
-  shell/              tokenize / alias / registry / fs / path / complete
+  shell/              tokenize / alias / registry / fs / path / complete / error / usage
     commands/         一个文件一条命令，自动注册
   content/            内容树视图、markdown→ANSI 渲染、语法着色、搜索
   theme/              themes/<名字>.ts（每套含 light/dark 两个变体）+ 聚合 + store
@@ -79,8 +79,10 @@ interface Ctx {
 
 - 命令**只依赖 `Ctx`**，不 import xterm、不 import 具体 store
 - 输出一律走 `ctx.term.println()`。`ctx.term.write()` 是裸写，不经过 readline 记账，只在确定不和输入行打架时用
-- 参数不足用 `printUsage(ctx, command)`，不要硬编码 `用法：…`（会和 `usage` 字段漂移）
-- 错误：`throw` 由 `main.ts` 捕获染红，没有退出码（没有管道，没人消费）
+- 参数不足用 `printUsage(command)`，不要硬编码 `用法：…`（会和 `usage` 字段漂移）
+- 错误：命令 `throw` 一个 `ShellError`（或 `fail(...)`），由 `shell.run()` 捕获后交给
+  `term.printError()` 统一染红；可选提示用第二参数（如可选值列表）。意外异常不吞，继续抛给 `main.ts` 兜底。
+  错误怎么渲染是终端层的事（`term/format.ts` 的 `formatError`），shell 只给消息和提示。
 
 ### 3. 命令自动注册
 

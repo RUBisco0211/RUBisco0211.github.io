@@ -2,6 +2,7 @@ import type { DocMeta } from '../../content/types.ts'
 import { bold, cyan, dim, yellow } from '../../term/ansi.ts'
 import { bar } from '../../term/chart.ts'
 import { padEnd, truncateTo, visibleWidth } from '../../term/width.ts'
+import { fail } from '../error.ts'
 import type { Command } from '../types.ts'
 
 const BAR_MAX = 20
@@ -101,8 +102,7 @@ const tags: Command = {
                 .slice(0, 8)
                 .map((item) => item.tag)
                 .join(' / ')
-            ctx.term.println(`没有这个标签：${wanted}${dim(`  可选：${names}`)}`)
-            return
+            fail(`没有这个标签：${wanted}`, `可选：${names}`)
         }
 
         for (const line of tagDocsLines(bucket, ctx.term.cols)) ctx.term.println(line)

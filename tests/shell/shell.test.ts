@@ -8,9 +8,12 @@ import ls from '../../src/shell/commands/ls.ts'
 import pwd from '../../src/shell/commands/pwd.ts'
 import history from '../../src/shell/commands/history.ts'
 import search from '../../src/shell/commands/search.ts'
+import tags from '../../src/shell/commands/tags.ts'
 import { buildFs } from '../../src/shell/fs.ts'
 import { createShell, type ShellDeps } from '../../src/shell/index.ts'
 import { displayPath } from '../../src/shell/path.ts'
+import { formatError } from '../../src/term/format.ts'
+import type { Command } from '../../src/shell/types.ts'
 import type { Term } from '../../src/term/terminal.ts'
 import type { ThemeStore } from '../../src/theme/store.ts'
 import { config } from '../../src/config.ts'
@@ -67,7 +70,7 @@ const fakeTheme: ThemeStore = {
 const plain = (text: string): string =>
     text.replace(/\x1b\]8;;[^\x1b]*\x1b\\/g, '').replace(/\x1b\[[0-9;]*m/g, '')
 
-function setup(aliases: Record<string, string> = {}) {
+function setup(aliases: Record<string, string> = {}, extra: readonly Command[] = []) {
     const lines: string[] = []
     const written: string[] = []
     const cleared = { count: 0 }
@@ -75,6 +78,8 @@ function setup(aliases: Record<string, string> = {}) {
     let historyEntries: string[] = []
     const term = {
         println: (text = '') => void lines.push(text),
+        // 跟真实 Term 一样：错误走同一个格式化函数
+        printError: (error: unknown, hint?: string) => void lines.push(formatError(error, hint)),
         write: (data: string) => void written.push(data),
         cols: 80,
         rows: 24,
@@ -96,12 +101,13 @@ function setup(aliases: Record<string, string> = {}) {
         config,
         fs: buildFs(docs),
         content: fakeContent,
-        commands: [cd, ls, cat, pwd, search, history],
+        commands: [cd, ls, cat, pwd, search, history, tags, ...extra],
         aliases,
     }
     const shell = createShell(deps)
     return {
         shell,
+        term,
         lines,
         written,
         cleared,
@@ -271,6 +277,41 @@ test('未知命令给出提示', async () => {
     await shell.run('lss')
     assert.match(out(), /没有这个命令：lss/)
     assert.doesNotMatch(out(), /help/)
+})
+
+test('命令错误统一走红色通道', async () => {
+    const { shell, out } = setup()
+
+    await shell.run('lss')
+    await shell.run('cd nope')
+    await shell.run('cat')
+
+    // 三处错误都由 shell.run 染红，而不是各自 println
+    assert.match(out(), /\x1b\[31m没有这个命令：lss\x1b\[39m/)
+    assert.match(out(), /\x1b\[31m没有这个目录：nope\x1b\[39m/)
+    assert.match(out(), /\x1b\[31m用法：cat <文件>\x1b\[39m/)
+})
+
+test('错误附带的可选提示是压暗的', async () => {
+    const { shell, out } = setup()
+    await shell.run('tags 不存在的标签')
+
+    assert.match(out(), /\x1b\[31m没有这个标签：不存在的标签\x1b\[39m/)
+    assert.match(out(), /\x1b\[2m  可选：fnm \/ nvm\x1b\[22m/)
+})
+
+test('意外异常不会被当成用户错误吞掉', async () => {
+    const boom = {
+        name: 'boom',
+        description: '故意抛 bug',
+        run() {
+            throw new Error('内部错误')
+        },
+    }
+    const { shell } = setup({}, [boom])
+
+    // ShellError 在 shell.run 里被吃掉；普通 Error 必须继续往上抛
+    await assert.rejects(() => shell.run('boom'), /内部错误/)
 })
 
 test('history 没有记录时给出提示', async () => {
