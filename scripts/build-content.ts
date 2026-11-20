@@ -107,11 +107,3 @@ export function readContent(contentDir = CONTENT_DIR): ReadResult {
     docs.sort((a, b) => collator.compare(a.slug, b.slug))
     return { docs, skipped }
 }
-
-const invokedDirectly = process.argv[1]?.endsWith('build-content.ts') ?? false
-if (invokedDirectly) {
-    const result = readContent()
-    console.log(
-        `content: ${result.docs.length} doc(s)${result.skipped ? `, ${result.skipped} draft(s) skipped` : ''}`,
-    )
-}

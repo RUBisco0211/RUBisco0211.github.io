@@ -9,7 +9,7 @@ export interface ResolvedDoc {
 }
 
 /**
- * cat / open 共用：解析参数、取回正文。
+ * cat 用：解析参数、取回正文。
  * 参数或文件有问题时抛 ShellError，由 shell.run() 统一报错。
  */
 export async function resolveDoc(
