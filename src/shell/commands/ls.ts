@@ -1,6 +1,6 @@
 import { cyan, dim, green, yellow } from '../../render/ansi.ts'
 import { formatCount } from '../../content/format.ts'
-import { padEnd, visibleWidth } from '../../render/width.ts'
+import { formatTable } from '../../render/table.ts'
 import { completePath } from '../complete.ts'
 import { fail } from '../error.ts'
 import { lookup, type FileEntry } from '../fs.ts'
@@ -39,30 +39,15 @@ function dirRow(name: string): Row {
     return { kind: dim('dir'), date: EMPTY, chars: EMPTY, name: cyan(`${name}/`), tags: EMPTY }
 }
 
-/** 按每列的最大显示宽度补齐（visibleWidth 会忽略颜色序列） */
+/** 一行单元格：类型 / 日期 / 字数 / 名称 / 标签 */
+function cells(row: Row): string[] {
+    return [row.kind, row.date, row.chars, row.name, row.tags]
+}
+
+/** 按每列的最大显示宽度补齐 */
 function render(rows: readonly Row[], header: Row | undefined): string[] {
     const all = header ? [header, ...rows] : rows
-    const width = {
-        kind: Math.max(...all.map((row) => visibleWidth(row.kind))),
-        date: Math.max(...all.map((row) => visibleWidth(row.date))),
-        chars: Math.max(...all.map((row) => visibleWidth(row.chars))),
-        name: Math.max(...all.map((row) => visibleWidth(row.name))),
-    }
-
-    const line = (row: Row): string =>
-        [
-            padEnd(row.kind, width.kind),
-            padEnd(row.date, width.date),
-            padEnd(row.chars, width.chars),
-            padEnd(row.name, width.name),
-            row.tags,
-        ]
-            .join('  ')
-            .trimEnd()
-
-    const out = rows.map(line)
-    if (header) out.unshift(line(header))
-    return out
+    return formatTable(all.map(cells))
 }
 
 const ls: Command = {

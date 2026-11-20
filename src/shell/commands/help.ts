@@ -1,5 +1,5 @@
 import { bold, cyan, dim } from '../../render/ansi.ts'
-import { padEnd, visibleWidth } from '../../render/width.ts'
+import { columnWidths, formatRow } from '../../render/table.ts'
 import { fail } from '../error.ts'
 import type { Command } from '../types.ts'
 
@@ -25,21 +25,21 @@ const help: Command = {
         const list = ctx.registry.list()
         // 第一列直接放 usage
         const label = (command: Command): string => command.usage ?? command.name
-        const width = list.reduce((max, command) => Math.max(max, visibleWidth(label(command))), 0)
+        const rows = list.map(
+            (command) => [cyan(label(command)), dim(command.description)] as const,
+        )
+        const widths = columnWidths(rows)
 
         ctx.term.println(bold('可用命令'))
-        for (const command of list) {
-            ctx.term.println(
-                `  ${cyan(padEnd(label(command), width))}  ${dim(command.description)}`,
-            )
-        }
+        for (const row of rows) ctx.term.println(`  ${formatRow(row, widths)}`)
 
         const aliases = Object.entries(ctx.config.aliases)
         if (aliases.length > 0) {
             ctx.term.println()
             ctx.term.println(bold('别名'))
             for (const [name, expansion] of aliases) {
-                ctx.term.println(`  ${cyan(padEnd(name, width))}  ${dim(`→ ${expansion}`)}`)
+                const row = [cyan(name), dim(`→ ${expansion}`)]
+                ctx.term.println(`  ${formatRow(row, widths)}`)
             }
         }
 

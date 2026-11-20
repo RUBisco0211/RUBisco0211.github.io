@@ -10,7 +10,7 @@ import { buildFs } from './shell/fs.ts'
 import { highlightLine } from './shell/highlight-line.ts'
 import { createShell } from './shell/index.ts'
 import { displayPath } from './shell/path.ts'
-import { padEnd, visibleWidth } from './render/width.ts'
+import { formatTable } from './render/table.ts'
 import { blue, dim, green } from './render/ansi.ts'
 import { Term } from './term/terminal.ts'
 import { findTheme } from './theme/index.ts'
@@ -74,15 +74,13 @@ function handleTab(): void {
     }
 
     // 显示多个候选
-    const width = candidates.reduce(
-        (max, candidate) => Math.max(max, visibleWidth(candidate.value)),
-        0,
-    )
     term.showCompletions(
-        candidates.map((candidate) =>
-            candidate.description
-                ? `${padEnd(candidate.value, width)}  ${dim(candidate.description)}`
-                : candidate.value,
+        formatTable(
+            candidates.map((candidate) =>
+                candidate.description
+                    ? [candidate.value, dim(candidate.description)]
+                    : [candidate.value],
+            ),
         ),
     )
 }

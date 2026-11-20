@@ -1,11 +1,11 @@
 import type { DocMeta } from '../../content/types.ts'
 import { bold, cyan, dim, yellow } from '../../render/ansi.ts'
-import { bar } from '../../render/chart.ts'
+import { barRows, type BarRow } from '../../render/barRows.ts'
 import { formatChars, formatCount } from '../../content/format.ts'
-import { padEnd, truncateTo, visibleWidth } from '../../render/width.ts'
+import { visibleWidth } from '../../render/width.ts'
 import type { Command } from '../types.ts'
 
-/** 柱状图最多画多宽，以及最少留几格（窄终端下保证还能看出高低） */
+/** 柱宽上下限（窄终端下保证还能看出高低） */
 const BAR_MAX = 24
 const BAR_MIN = 4
 
@@ -41,31 +41,19 @@ export function sizesOf(docs: readonly DocMeta[], limit = 5): SizeEntry[] {
         .slice(0, limit)
 }
 
-interface BarRow {
-    readonly label: string
-    readonly value: number
-    readonly valueText: string
-}
-
 /**
  * 一组柱子。列宽和柱宽按整组统一算，否则每行各自算会参差不齐。
  */
-function barRows(rows: readonly BarRow[], cols: number, paint: (text: string) => string): string[] {
+function barLines(
+    rows: readonly BarRow[],
+    cols: number,
+    paint: (text: string) => string,
+): string[] {
     if (rows.length === 0) return []
 
-    const max = Math.max(...rows.map((row) => row.value))
     const labelCap = Math.max(8, Math.floor((cols - BAR_MIN) / 2))
     const labelWidth = Math.min(labelCap, Math.max(...rows.map((row) => visibleWidth(row.label))))
-    const valueWidth = Math.max(...rows.map((row) => visibleWidth(row.valueText)))
-    // 2 + label + 2 + bar + 1 + value
-    const barWidth = Math.max(BAR_MIN, Math.min(BAR_MAX, cols - labelWidth - valueWidth - 5))
-
-    return rows.map(
-        (row) =>
-            `  ${padEnd(truncateTo(row.label, labelWidth), labelWidth)}  ${paint(
-                padEnd(bar(row.value, max, barWidth), barWidth),
-            )} ${dim(row.valueText.padStart(valueWidth))}`,
-    )
+    return barRows(rows, { cols, labelWidth, paint, barMax: BAR_MAX, barMin: BAR_MIN })
 }
 
 export function statsLines(docs: readonly DocMeta[], cols: number): string[] {
@@ -89,7 +77,7 @@ export function statsLines(docs: readonly DocMeta[], cols: number): string[] {
             value: bucket.count,
             valueText: String(bucket.count),
         }))
-        lines.push(dim('按月'), ...barRows(rows, cols, yellow), '')
+        lines.push(dim('按月'), ...barLines(rows, cols, yellow), '')
     }
 
     const sizes = sizesOf(posts)
@@ -99,7 +87,7 @@ export function statsLines(docs: readonly DocMeta[], cols: number): string[] {
             value: entry.chars,
             valueText: formatCount(entry.chars),
         }))
-        lines.push(dim(`篇幅 Top ${sizes.length}`), ...barRows(rows, cols, cyan))
+        lines.push(dim(`篇幅 Top ${sizes.length}`), ...barLines(rows, cols, cyan))
     }
 
     return lines

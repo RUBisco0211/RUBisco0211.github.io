@@ -1,7 +1,8 @@
 import type { DocMeta } from '../../content/types.ts'
 import { bold, cyan, dim, yellow } from '../../render/ansi.ts'
-import { bar } from '../../render/chart.ts'
-import { padEnd, truncateTo, visibleWidth } from '../../render/width.ts'
+import { barRows, type BarRow } from '../../render/barRows.ts'
+import { formatTable } from '../../render/table.ts'
+import { truncateTo, visibleWidth } from '../../render/width.ts'
 import { fail } from '../error.ts'
 import type { Command } from '../types.ts'
 
@@ -38,27 +39,31 @@ export function tagsLines(docs: readonly DocMeta[], cols: number): string[] {
     const buckets = tagBuckets(docs)
     if (buckets.length === 0) return [dim('还没有任何标签')]
 
-    const max = Math.max(...buckets.map((bucket) => bucket.docs.length))
-    const countWidth = String(buckets.length).length
     const labelWidth = Math.max(
         ...buckets.map((bucket) => visibleWidth(bucket.tag)),
         // 太长的标签截断，别把柱子挤没
         Math.min(24, Math.floor(cols / 2)),
     )
 
-    const lines = [dim(`${buckets.length} 个标签`), '']
+    const rows: BarRow[] = buckets.map((bucket) => ({
+        label: bucket.tag,
+        value: bucket.docs.length,
+        valueText: String(bucket.docs.length),
+    }))
 
-    for (const bucket of buckets) {
-        const count = bucket.docs.length
-        const barWidth = Math.max(BAR_MIN, Math.min(BAR_MAX, cols - labelWidth - countWidth - 4))
-        lines.push(
-            `  ${cyan(padEnd(truncateTo(bucket.tag, labelWidth), labelWidth))}  ${yellow(
-                padEnd(bar(count, max, barWidth), barWidth),
-            )} ${dim(String(count))}`,
-        )
-    }
-
-    return lines
+    return [
+        dim(`${buckets.length} 个标签`),
+        '',
+        ...barRows(rows, {
+            cols,
+            labelWidth,
+            labelPaint: cyan,
+            paint: yellow,
+            barMax: BAR_MAX,
+            barMin: BAR_MIN,
+            header: [dim('标签'), '', dim('篇数')],
+        }),
+    ]
 }
 
 /** 某个标签下的文章，新的在前 */
@@ -67,20 +72,24 @@ export function tagDocsLines(bucket: TagBucket, cols: number): string[] {
     const dateWidth = 10
     const nameWidth = Math.max(8, cols - dateWidth - 6)
 
-    const lines = [bold(bucket.tag), dim(`${items.length} 篇`), '']
-
-    for (const doc of items) {
+    const rows = items.map((doc) => {
         const name = doc.slug.split('/').pop() ?? doc.slug
-        const title = doc.title !== name ? dim(`  ${truncateTo(doc.title, 24)}`) : ''
-        lines.push(
-            `  ${dim(doc.date ?? '-'.repeat(dateWidth))}  ${padEnd(
-                truncateTo(name, nameWidth),
-                nameWidth,
-            )}${title}`.trimEnd(),
-        )
-    }
+        const title = doc.title !== name ? dim(truncateTo(doc.title, 24)) : ''
+        return [dim(doc.date ?? '-'.repeat(dateWidth)), truncateTo(name, nameWidth), title]
+    })
 
-    return lines
+    const header = [dim('日期'), dim('名称'), dim('标题')]
+
+    return [
+        bold(bucket.tag),
+        dim(`${items.length} 篇`),
+        '',
+        ...formatTable([header, ...rows], {
+            indent: '  ',
+            gap: ['  ', '  '],
+            widths: [dateWidth, nameWidth, 0],
+        }),
+    ]
 }
 
 const tags: Command = {

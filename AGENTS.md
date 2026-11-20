@@ -28,7 +28,7 @@ src/
   main.ts             装配 + REPL 循环
   config.ts           站点配置：user/host/字体/主题/alias
   storage.ts          localStorage 唯一入口（统一前缀）
-  render/             ANSI 原语、显示宽度、折行、语法着色、markdown→ANSI
+  render/             ANSI 原语、显示宽度、折行、语法着色、markdown→ANSI、列对齐
   term/               xterm 封装、pager/select 整屏组件、命令历史
   shell/              tokenize / alias / registry / fs / path / complete / error / usage
     commands/         一个文件一条命令，自动注册
@@ -135,6 +135,18 @@ aliases: {
 
 所以 `highlightLine()` 只能往字符之间插样式，**绝不能增删字符**（测试里有断言：去色后必须和原行逐字符一致）。
 认得的命令青、别名品红、不认识的红、选项黄、引号内容绿；参数一律默认色。
+
+### 9. 列对齐统一走 `render/table.ts`
+
+ls / help / cat / stats / tags / Tab 补全都是「逐行、若干单元格、按列宽补齐」这一类。
+`formatTable(rows, options)` 负责测列宽、逐列补齐、按 gap 拼接、`trimEnd`；
+`formatRow()` 用显式列宽（固定列或多块共享宽度时用），`rowWidth()` 给画横线用。
+单元格可以带 ANSI / OSC 8，宽度一律按 `visibleWidth` 算；**不做截断**，需要截的先 `truncateTo`。
+
+柱状行（label + 柱 + 右对齐数值）抽在 `render/barRows.ts`，stats 和 tags 共用一套布局。
+
+例外：neofetch（art + 分隔线 + 横向并排）和 markdown 表格（单元格折行、定宽压缩）保留各自实现，
+没有塞进 table 抽象。
 
 ## 开发
 

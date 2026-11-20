@@ -55,3 +55,8 @@ export function truncateTo(text: string, width: number): string {
 export function padEnd(text: string, width: number): string {
     return text + ' '.repeat(Math.max(0, width - visibleWidth(text)))
 }
+
+/** 按显示宽度左补空格，右对齐用 */
+export function padStart(text: string, width: number): string {
+    return ' '.repeat(Math.max(0, width - visibleWidth(text))) + text
+}
