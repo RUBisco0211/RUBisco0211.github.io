@@ -33,7 +33,7 @@ interface ReadlineInternals {
  */
 export class Term {
     readonly xterm: Terminal
-    readonly readline: Readline
+    private readonly readline: Readline
 
     private readonly host: HTMLElement
     private readonly siteHistory: SiteHistory
@@ -146,6 +146,19 @@ export class Term {
         } catch {
             // readline 状态已经没了（比如被 Ctrl-C 取消），忽略
         }
+    }
+
+    /**
+     * 当前输入行的内容（没在读的时候返回空串）。
+     * 补全要拿整行来算，但行编辑器是内部实现，不外露。
+     */
+    getLine(): string {
+        return this.readline.getLine()
+    }
+
+    /** 替换输入行内容（补全用），光标会跟到末尾 */
+    updateLine(text: string): void {
+        this.readline.updateLine(text)
     }
 
     /** 写一行（自动补换行），走 readline 的通道以保持它的光标记账正确。 */

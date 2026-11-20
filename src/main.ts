@@ -54,20 +54,20 @@ term.setLineHighlighter((line) =>
 
 /** Tab：一个候选直接补，多个补到公共前缀，补不动就列出来 */
 function handleTab(): void {
-    const line = term.readline.getLine()
+    const line = term.getLine()
     const { candidates, from, to } = completeLine(shell.ctx, line)
     if (candidates.length === 0) return
 
     const splice = (value: string): string => line.slice(0, from) + value + line.slice(to)
 
     if (candidates.length === 1) {
-        term.readline.updateLine(splice(candidates[0]!.value))
+        term.updateLine(splice(candidates[0]!.value))
         return
     }
 
     const prefix = commonPrefix(candidates.map((candidate) => candidate.value))
     if (prefix.length > line.length - from) {
-        term.readline.updateLine(splice(prefix))
+        term.updateLine(splice(prefix))
         return
     }
 
