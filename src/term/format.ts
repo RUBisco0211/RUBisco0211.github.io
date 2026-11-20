@@ -14,18 +14,10 @@ export function formatChars(count: number): string {
     return `${(count / 10000).toFixed(1)} 万字`
 }
 
-/** 任意异常 → 终端里能显示的文本。Error 取 message，其他直接 String */
-export function errorText(error: unknown): string {
-    return error instanceof Error ? error.message : String(error)
-}
-
 /**
- * 错误的一行文本：红字，可选提示压暗跟在后面。
- *
- * 只认「消息 + 可选提示」两个字符串，不知道 ShellError —— 那层语义在 shell，
- * 这里只管渲染。
+ * 错误的一行 red 文本，可选提示 dim 跟在后面
  */
 export function formatError(error: unknown, hint?: string): string {
-    const message = errorText(error)
+    const message = error instanceof Error ? error.message : String(error)
     return hint ? `${red(message)}${dim(`  ${hint}`)}` : red(message)
 }

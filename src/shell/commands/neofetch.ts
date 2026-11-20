@@ -1,5 +1,6 @@
 import type { DocMeta } from '../../content/types.ts'
 import { blue, bold, dim, hyperlink } from '../../term/ansi.ts'
+import { formatChars } from '../../term/format.ts'
 import { padEnd, visibleWidth } from '../../term/width.ts'
 import type { Command } from '../types.ts'
 
@@ -63,12 +64,6 @@ async function loadArt(): Promise<readonly string[]> {
  * 有测试拿它和 node_modules 里的实际版本对比，忘了改会红。
  */
 const XTERM_VERSION = '5.5.0'
-
-/** 45403 → '4.5 万字'，812 → '812 字' */
-function formatChars(count: number): string {
-    if (count < 10000) return `${count} 字`
-    return `${(count / 10000).toFixed(1)} 万字`
-}
 
 /** 站点内容统计，纯函数，方便单测 */
 export function buildInfo(input: InfoInput): InfoLine[] {
