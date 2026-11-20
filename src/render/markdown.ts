@@ -67,7 +67,7 @@ function block(token: Token, width: number, indent = ''): string {
     switch (token.type) {
         case 'heading': {
             const heading = token as Tokens.Heading
-            const text = inline(heading.tokens)
+            const text = `${'#'.repeat(heading.depth)} ${inline(heading.tokens)}`
             if (heading.depth <= 2) return `\n${bold(cyan(text))}\n`
             if (heading.depth === 3) return `\n${bold(magenta(text))}\n`
             return `\n${bold(dim(text))}\n`
@@ -231,8 +231,9 @@ export function headingTitles(source: string): string[] {
     const titles: string[] = []
     for (const token of marked.lexer(source)) {
         if (token.type !== 'heading') continue
-        const text = stripAnsi(inline((token as Tokens.Heading).tokens)).trim()
-        if (text !== '') titles.push(text)
+        const heading = token as Tokens.Heading
+        const text = stripAnsi(inline(heading.tokens)).trim()
+        if (text !== '') titles.push(`${'#'.repeat(heading.depth)} ${text}`)
     }
     return titles
 }

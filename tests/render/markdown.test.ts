@@ -7,11 +7,10 @@ import { visibleWidth } from '../../src/render/width.ts'
 const plain = (text: string): string =>
     text.replace(/\x1b\]8;;[^\x1b]*\x1b\\/g, '').replace(/\x1b\[[0-9;]*m/g, '')
 
-test('标题去掉 # 并加粗', () => {
+test('标题保留 # 并加粗', () => {
     const out = renderMarkdown('## 安装示例')
-    assert.equal(plain(out), '安装示例')
+    assert.equal(plain(out), '## 安装示例')
     assert.match(out, /\x1b\[1m/)
-    assert.doesNotMatch(plain(out), /#/)
 })
 
 test('列表项逐行输出', () => {
@@ -132,11 +131,11 @@ test('空文档返回空串', () => {
     assert.equal(renderMarkdown('\n\n'), '')
 })
 
-test('headingTitles 抽出所有标题的纯文本', () => {
+test('headingTitles 抽出带 # 前缀的标题', () => {
     assert.deepEqual(headingTitles('# 一级\n\n正文\n\n## 二级 **粗**\n\n### 三级'), [
-        '一级',
-        '二级 粗',
-        '三级',
+        '# 一级',
+        '## 二级 粗',
+        '### 三级',
     ])
     assert.deepEqual(headingTitles('只有正文'), [])
 })
