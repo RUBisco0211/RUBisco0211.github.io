@@ -2,6 +2,7 @@ import type { DocMeta } from '../../content/types.ts'
 import { cyan, dim, yellow } from '../../render/ansi.ts'
 import { barRows, type BarRow } from '../../render/barRows.ts'
 import { select } from '../../term/select.ts'
+import { readDoc } from '../reader.ts'
 import { visibleWidth } from '../../render/width.ts'
 import { fail } from '../error.ts'
 import type { Command } from '../types.ts'
@@ -104,7 +105,12 @@ const tags: Command = {
             })),
         })
 
-        if (picked) await ctx.run(`cat "${picked}"`)
+        if (!picked) return
+
+        const doc = ctx.content.find(picked)
+        const text = await ctx.content.text(picked)
+        if (!doc || text === undefined) fail(`正文加载失败：${picked}`)
+        await readDoc(ctx, doc, text)
     },
 }
 

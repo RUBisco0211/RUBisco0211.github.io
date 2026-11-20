@@ -35,6 +35,10 @@ export interface PagerInput {
     readonly render: (cols: number) => readonly string[]
     /** 标题列表，按 `t` 可以跳过去 */
     readonly outline?: readonly string[]
+    /** 打开时自动搜这个词，并跳到第一个匹配（从 search 进来时用） */
+    readonly focus?: string
+    /** 初次跳转时从这个行号之后找匹配，用来跳过 frontmatter */
+    readonly focusFrom?: number
     /** 键位覆盖，按动作替换默认值 */
     readonly keys?: Partial<Keymap<PagerAction>>
 }
@@ -223,6 +227,8 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
 
     let lines: string[] = []
     let offset = 0
+    /** 正文首行在折行后的下标，focus 跳转时跳过 frontmatter */
+    let focusStart = 0
 
     let mode: Mode = 'browse'
     let query = ''
@@ -246,7 +252,13 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
         const previousMax = Math.max(0, lines.length - height)
         const ratio = previousMax > 0 ? offset / previousMax : 0
 
-        lines = input.render(cols).flatMap((line) => wrapAnsi(line, cols))
+        const raw = input.render(cols)
+        const wrapped = raw.map((line) => wrapAnsi(line, cols))
+        lines = wrapped.flat()
+        focusStart = wrapped
+            .slice(0, Math.max(0, input.focusFrom ?? 0))
+            .reduce((sum, chunk) => sum + chunk.length, 0)
+
         offset = clampOffset(
             Math.round(ratio * Math.max(0, lines.length - height)),
             lines.length,
@@ -372,6 +384,17 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
     }
 
     rebuild()
+
+    // 从 search 跳过来时，直接定位到关键词第一次出现的位置（跳过 frontmatter）
+    if (input.focus !== undefined && input.focus.trim() !== '') {
+        query = input.focus
+        recalcMatches()
+        const first = matches.findIndex((line) => line >= focusStart)
+        if (first >= 0) {
+            matchIndex = first
+            offset = clampOffset(matches[first]! - Math.floor(height / 3), lines.length, height)
+        }
+    }
 
     term.write(`${ALT_SCREEN_ON}${CLEAR_SCREEN}`)
     draw()

@@ -1,0 +1,53 @@
+import type { DocMeta } from '../content/types.ts'
+import type { Ctx } from './types.ts'
+
+export interface ReadOptions {
+    /** 打开后立即定位到这个搜索词，并高亮所有匹配（从 search 跳过来时用） */
+    readonly focus?: string
+}
+
+/**
+ * 在 pager 里打开一篇文档。
+ *
+ * cat 和 search / tags 都用它：search 选中后带着 snippet 的词打开，直接跳到命中的位置。
+ * markdown 渲染器和 pager 按需加载，避免进主包。
+ */
+export async function readDoc(
+    ctx: Ctx,
+    doc: DocMeta,
+    text: string,
+    options: ReadOptions = {},
+): Promise<void> {
+    const [{ renderMarkdown, headingTitles }, { runPager }, { dim }, { formatTable }] =
+        await Promise.all([
+            import('../render/markdown.ts'),
+            import('../term/pager.ts'),
+            import('../render/ansi.ts'),
+            import('../render/table.ts'),
+        ])
+
+    const outline = headingTitles(text)
+    const hints = ['j/k 行', '空格 翻页']
+    if (outline.length > 0) hints.push('t 目录')
+    hints.push('/ 搜索', 'y 复制', 'q 退出')
+
+    // frontmatter 固定在第一段，先排好版，不用每次折行重算
+    const meta = formatTable(doc.frontmatter.map(([key, value]) => [dim(key), value]))
+    // 正文从 meta 之后的空行开始；从 search 跳过来时跳过 frontmatter 再找匹配
+    const bodyStart = meta.length + 1
+
+    // 视口变了 pager 会带着新宽度再调一次 render
+    await runPager(ctx.term, {
+        title: doc.title,
+        outline,
+        focus: options.focus,
+        focusFrom: bodyStart,
+        labels: {
+            outline: '目录',
+            outlineHints: ['↑↓ 选择', 'Enter 跳转', 'Esc 取消'],
+            noMatch: (query) => `/${query} 无匹配`,
+            hints,
+        },
+        render: (cols) => [...meta, '', ...renderMarkdown(text, cols).split('\n')],
+    })
+}

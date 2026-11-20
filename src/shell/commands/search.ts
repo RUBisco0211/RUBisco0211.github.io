@@ -1,6 +1,9 @@
 import { searchDocs } from '../../content/search.ts'
+import type { SearchHit } from '../../content/search.ts'
 import { dim } from '../../render/ansi.ts'
 import { select } from '../../term/select.ts'
+import { readDoc } from '../reader.ts'
+import { fail } from '../error.ts'
 import { printUsage } from '../usage.ts'
 import type { Command } from '../types.ts'
 
@@ -18,18 +21,22 @@ const search: Command = {
             return
         }
 
-        const picked = await select(ctx.term, {
+        const picked = await select<SearchHit>(ctx.term, {
             title: `搜索 “${query}”`,
             labels: { empty: '无匹配', footer: '↑↓ 移动 · Enter 打开 · Esc 取消' },
             hint: `${hits.length} 条`,
             items: hits.map((hit) => ({
-                value: hit.doc.slug,
+                value: hit,
                 label: hit.doc.title,
                 detail: [hit.doc.date, hit.doc.slug].filter(Boolean).join('  '),
             })),
         })
 
-        if (picked) await ctx.run(`cat "${picked}"`)
+        if (!picked) return
+
+        const text = await ctx.content.text(picked.doc.slug)
+        if (text === undefined) fail(`正文加载失败：${picked.doc.slug}`)
+        await readDoc(ctx, picked.doc, text, { focus: picked.term })
     },
 }
 

@@ -5,6 +5,8 @@ export interface SearchHit {
     readonly doc: DocMeta
     readonly score: number
     readonly snippet: string
+    /** 产生 snippet 的那个词，打开时拿它定位（只在正文命中时才有） */
+    readonly term?: string
 }
 
 const SNIPPET_RADIUS = 30
@@ -53,6 +55,7 @@ export async function searchDocs(store: ContentStore, query: string): Promise<Se
 
         let score = 0
         let snippet = ''
+        let snippetTerm: string | undefined
 
         for (const term of terms) {
             let termScore = 0
@@ -69,11 +72,22 @@ export async function searchDocs(store: ContentStore, query: string): Promise<Se
             }
 
             score += termScore
-            if (snippet === '') snippet = makeSnippet(body, term)
+            if (snippet === '') {
+                const made = makeSnippet(body, term)
+                if (made !== '') {
+                    snippet = made
+                    snippetTerm = term
+                }
+            }
         }
 
         if (score === 0) continue
-        hits.push({ doc, score, snippet: snippet || doc.description || '' })
+        hits.push({
+            doc,
+            score,
+            snippet: snippet || doc.description || '',
+            term: snippetTerm,
+        })
     }
 
     return hits.sort(
