@@ -33,13 +33,10 @@ function makeSnippet(text: string, term: string): string {
 }
 
 /**
- * 线性扫描搜索。
+ * 线性扫描搜索
  *
- * 内容量在几十篇这个量级，全量扫一遍是微秒级的，不需要倒排索引 ——
- * 更重要的是中文：倒排索引要分词，而 substring 匹配对中文是天然正确的，
- * 用户输"迁移"就能命中"从nvm迁移到fnm"。
- *
- * 打分：标题 > 标签 > 正文出现次数。多个词按 AND 匹配。
+ * 打分：标题 > 标签 > 正文出现次数
+ * 多个词按 AND 匹配
  */
 export async function searchDocs(store: ContentStore, query: string): Promise<SearchHit[]> {
     const terms = query.toLowerCase().split(/\s+/).filter(Boolean)

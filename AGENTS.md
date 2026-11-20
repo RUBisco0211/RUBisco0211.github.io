@@ -30,6 +30,7 @@ src/
   storage.ts          localStorage 唯一入口（统一前缀）
   render/             ANSI 原语、显示宽度、折行、语法着色、markdown→ANSI、列对齐
   term/               xterm 封装、pager/select 整屏组件、命令历史
+    pager/             index.ts 交互循环 + logic.ts 纯逻辑
   shell/              tokenize / alias / registry / fs / path / complete / error / usage
     commands/         一个文件一条命令，自动注册
   content/            内容树视图、字数格式化、搜索
@@ -121,7 +122,8 @@ aliases: {
 两个都走同一套模式：**alternate screen**（`\x1b[?1049h` / `l`）+ `Term.captureKeys()` 全量接管键盘 +
 逐行 `\x1b[{row};1H\x1b[2K` 重绘 + `onResize` 重排（alt buffer 不 reflow，尺寸变了必须整屏重来）。
 
-- `term/pager.ts` 整屏阅读器：搜索（`/` 后 `n`/`N`）、目录跳转（`t`）、滚轮、翻页
+- `term/pager/` 整屏阅读器：`index.ts` 是交互循环（搜索 `/` 后 `n`/`N`、目录跳转 `t`、滚轮、翻页），
+  `logic.ts` 是纯逻辑（滚动换算、标题定位、状态栏、选区清理），不碰 `Term`，直接在 node 里测
 - `term/select.ts` 通用单选列表：`theme` 和 `history` 用，支持 `filterable` 的输入筛选
 
 命令里 `await` 它们，所以占用期间 shell 不会去调 `term.read()`——两者天然互斥，shell 不用改。
