@@ -1,31 +1,17 @@
 import assert from 'node:assert/strict'
 import { afterEach, beforeEach, test } from 'node:test'
 import { readStored, takeLegacy, writeStored } from '../src/storage.ts'
+import { installFakeStorage } from './helpers/fakeStorage.ts'
 
-function fakeStorage(): Storage {
-    const map = new Map<string, string>()
-    return {
-        get length() {
-            return map.size
-        },
-        clear: () => map.clear(),
-        getItem: (key: string) => map.get(key) ?? null,
-        key: (index: number) => [...map.keys()][index] ?? null,
-        removeItem: (key: string) => void map.delete(key),
-        setItem: (key: string, value: string) => void map.set(key, value),
-    } as Storage
-}
-
-const original = (globalThis as { localStorage?: Storage }).localStorage
 let storage: Storage
+let restore: () => void
 
 beforeEach(() => {
-    storage = fakeStorage()
-    ;(globalThis as { localStorage?: Storage }).localStorage = storage
+    ;({ storage, restore } = installFakeStorage())
 })
 
 afterEach(() => {
-    ;(globalThis as { localStorage?: Storage }).localStorage = original
+    restore()
 })
 
 test('读写都走带前缀的 key', () => {

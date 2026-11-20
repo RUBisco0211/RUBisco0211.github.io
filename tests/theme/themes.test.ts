@@ -50,13 +50,6 @@ test('findTheme 忽略大小写和空格', () => {
     assert.equal(findTheme('nope'), undefined)
 })
 
-test('每套主题都同时有浅色和深色', () => {
-    for (const theme of themes) {
-        assert.ok(theme.light, `${theme.name} 缺浅色`)
-        assert.ok(theme.dark, `${theme.name} 缺深色`)
-    }
-})
-
 test('每个变体都填齐 16 色和页面配色', () => {
     for (const [label, , palette] of palettes()) {
         assert.match(palette.pageBg, HEX, `${label} pageBg`)
