@@ -12,7 +12,7 @@ import { marked } from 'marked'
 import type { Token, Tokens } from 'marked'
 import { blue, bold, cyan, dim, hyperlink, italic, magenta, yellow } from './ansi.ts'
 import { wrapAnsi } from './wrap.ts'
-import { padEnd, stripAnsi, visibleWidth } from './width.ts'
+import { padEnd, stripAnsi, truncateTo, visibleWidth } from './width.ts'
 import { highlightCode, normalizeLang } from './highlight.ts'
 
 const link = (href: string, text: string): string => hyperlink(href, blue(text))
@@ -66,33 +66,31 @@ function inlineToken(token: Token): string {
 /**
  * 代码块。
  *
- * 字符网格里没有背景块，所以用边框把代码和正文隔开：顶边带语言标签，
- * 左侧一条竖线，底边收口。宽度够时预先按内宽折行，保证每行都带竖线，
- * 不交给 pager 去折（那会丢掉边框）。
+ * 字符网格里没有背景块，所以画一个闭合的边框把代码和正文隔开：顶边带语言标签，
+ * 左右竖线，底边收口。宽度够时预先按内宽折行，保证每行都带边框，
+ * 不交给 pager 去折（那会把右边框弄丢）。
  */
-function renderCode(code: Tokens.Code, width: number, indent: string): string {
+function renderCode(code: Tokens.Code, width: number): string {
     const body = code.text.replace(/\n$/, '')
-    const label = code.lang?.trim() ?? ''
-    const highlighted = highlightCode(body, normalizeLang(label))
+    const highlighted = highlightCode(body, normalizeLang(code.lang))
+    const raw = highlighted.split('\n')
+    // 左右边框 + 两侧各一个空格共占 4 列
+    const inner = width > 0 ? Math.max(0, width - 4) : Math.max(0, ...raw.map(visibleWidth))
+    const rows = inner > 0 ? raw.flatMap((line) => wrapAnsi(line, inner)) : raw
+    const total = inner + 4
 
-    const gutter = 2 // '│ '
-    const total = width > 0 ? Math.max(4, width - visibleWidth(indent)) : 0
-    const inner = total > 0 ? total - gutter : 0
-
-    const rows = highlighted
-        .split('\n')
-        .flatMap((line) => (inner > 0 ? wrapAnsi(line, inner) : [line]))
-
+    // 语言名太长会撑破顶边，留出至少一段填充
+    const label = truncateTo(code.lang?.trim() ?? '', width > 0 ? Math.max(0, total - 10) : total)
+    const head = `${dim('┌─')}${label !== '' ? ` ${cyan(label)} ` : ''}`
     const headWidth = 2 + (label !== '' ? visibleWidth(` ${label} `) : 0)
-    const topFill = total > 0 ? '─'.repeat(Math.max(0, total - headWidth)) : ''
-    const top = `${indent}${dim('┌─')}${label !== '' ? ` ${cyan(label)} ` : ''}${dim(topFill)}`
-    const bottom = `${indent}${dim(`└${'─'.repeat(Math.max(0, total - 1))}`)}`
-    const lines = rows.map((line) => `${indent}${dim('│')} ${line}`)
+    const top = `${head}${dim('─'.repeat(Math.max(0, total - headWidth - 1)))}${dim('┐')}`
+    const bottom = `${dim(`└${'─'.repeat(Math.max(0, total - 2))}┘`)}`
+    const lines = rows.map((line) => `${dim('│')} ${padEnd(line, inner)} ${dim('│')}`)
 
     return `${[top, ...lines, bottom].join('\n')}\n\n`
 }
 
-function block(token: Token, width: number, indent = ''): string {
+function block(token: Token, width: number): string {
     switch (token.type) {
         case 'heading': {
             const heading = token as Tokens.Heading
@@ -109,28 +107,31 @@ function block(token: Token, width: number, indent = ''): string {
             const list = token as Tokens.List
             const lines = list.items.map((item, index) => {
                 const marker = list.ordered ? `${(list.start || 1) + index}. ` : `${cyan('•')} `
+                // 悬挂缩进要按 marker 的显示宽度算，'• ' 是 2 列
+                const pad = ' '.repeat(list.ordered ? marker.length : 2)
+                const cont = `  ${pad}`
+                // 子块按缩进后的宽度排，否则代码块边框会超出终端
+                const inner = width > 0 ? Math.max(1, width - visibleWidth(cont)) : width
                 const body = item.tokens
-                    .map((child) => block(child, width, ''))
+                    .map((child) => block(child, inner))
                     .join('')
                     .replace(/\n{2,}/g, item.loose ? '\n\n' : '\n')
                     .trimEnd()
                 const [first = '', ...rest] = body.split('\n')
-                // 悬挂缩进要按 marker 的显示宽度算，'• ' 是 2 列
-                const pad = ' '.repeat(list.ordered ? marker.length : 2)
-                return `${indent}  ${marker}${first}${rest
-                    .map((line) => `\n${indent}  ${pad}${line}`)
-                    .join('')}`
+                return `  ${marker}${first}${rest.map((line) => `\n${cont}${line}`).join('')}`
             })
             return `${lines.join('\n')}\n\n`
         }
 
         case 'code':
-            return renderCode(token as Tokens.Code, width, indent)
+            return renderCode(token as Tokens.Code, width)
 
         case 'blockquote': {
             const quote = token as Tokens.Blockquote
+            // 引用符占 2 列，子块按剩余宽度排
+            const inner = width > 0 ? Math.max(1, width - 2) : width
             const body = (quote.tokens ?? [])
-                .map((child) => block(child, width, ''))
+                .map((child) => block(child, inner))
                 .join('')
                 .trimEnd()
             return `${body
