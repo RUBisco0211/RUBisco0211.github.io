@@ -5,7 +5,6 @@ import { truncateTo } from './width.ts'
 export interface SelectItem<T> {
     readonly value: T
     readonly label: string
-    /** 右侧的补充说明，压暗显示 */
     readonly detail?: string
 }
 
@@ -43,15 +42,14 @@ export function clampWindow(index: number, offset: number, visible: number): num
 /**
  * 整屏单选列表。
  *
- * 用 alternate screen 铺满一屏，退出时原屏幕还原。键盘走 Term.captureKeys，
- * 所以 readline 收不到这些按键。
+ * 用 alternate screen 铺满一屏，退出时原屏幕还原
+ * 键盘由 Term.captureKeys 处理
  *
- * 返回选中的项；按 Esc / q 取消时返回 undefined。
+ * 返回选中的项
+ * 按 Esc / q 取消时返回 undefined
+ *
  */
-export function select<T>(
-    term: Term,
-    options: SelectOptions<T>,
-): Promise<SelectItem<T> | undefined> {
+export function select<T>(term: Term, options: SelectOptions<T>): Promise<T | undefined> {
     if (options.items.length === 0) return Promise.resolve(undefined)
 
     const rows = term.rows
@@ -102,7 +100,7 @@ export function select<T>(
         const finish = (result: SelectItem<T> | undefined): void => {
             release()
             term.write('\x1b[?1049l')
-            resolve(result)
+            resolve(result?.value)
         }
 
         const move = (delta: number): void => {

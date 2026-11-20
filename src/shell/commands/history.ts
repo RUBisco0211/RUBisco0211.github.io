@@ -29,8 +29,8 @@ const history: Command = {
 
         if (!picked) return
 
-        // 只填到提示符里，回车由用户自己按（这样还能继续改）
-        ctx.prefill(picked.value)
+        // 只填到提示符里
+        ctx.prefill(picked)
     },
 }
 

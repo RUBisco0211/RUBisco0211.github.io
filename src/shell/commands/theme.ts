@@ -23,8 +23,8 @@ async function pick(ctx: Ctx): Promise<void> {
         return
     }
 
-    ctx.theme.set(picked.value)
-    ctx.term.println(green(`主题已切换为 ${picked.value}（${ctx.theme.mode()}）`))
+    ctx.theme.set(picked)
+    ctx.term.println(green(`主题已切换为 ${picked}（${ctx.theme.mode()}）`))
 }
 
 const theme: Command = {
