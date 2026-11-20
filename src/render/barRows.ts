@@ -6,8 +6,8 @@ import { truncateTo, visibleWidth } from './width.ts'
 /**
  * label + 柱 + 右对齐数值 的成组柱状行。
  *
- * stats 和 tags 都要这个布局，柱子长度、列宽都按整组统一算，
- * 否则每行各自算会参差不齐。列宽策略（标签多宽、柱子多长）由调用方决定。
+ * stats 用它排版，柱子长度、列宽都按整组统一算，否则每行各自算会参差不齐。
+ * 列宽策略（标签多宽、柱子多长）由调用方决定。
  */
 export interface BarRow {
     readonly label: string
@@ -28,25 +28,19 @@ export interface BarRowsOptions {
     readonly barMax?: number
     /** 柱宽下限，默认 4 */
     readonly barMin?: number
-    /** 可选表头，按 [标签, (柱列留空), 数值] 三个单元格给 */
-    readonly header?: readonly [string, string, string]
 }
 
 const DEFAULT_BAR_MAX = 24
 const DEFAULT_BAR_MIN = 4
 
 export function barRows(rows: readonly BarRow[], options: BarRowsOptions): string[] {
-    const { cols, paint, labelPaint = (text: string) => text } = options
+    if (rows.length === 0) return []
+
+    const { cols, labelWidth, paint, labelPaint = (text: string) => text } = options
     const barMax = options.barMax ?? DEFAULT_BAR_MAX
     const barMin = options.barMin ?? DEFAULT_BAR_MIN
-    // 表头也算进列宽，不然“标签 / 篇数”会把列挤歪
-    const labelWidth = Math.max(
-        options.labelWidth,
-        options.header ? visibleWidth(options.header[0]) : 0,
-    )
-    const headerValueWidth = options.header ? visibleWidth(options.header[2]) : 0
-    const max = rows.length > 0 ? Math.max(...rows.map((row) => row.value)) : 0
-    const valueWidth = Math.max(headerValueWidth, ...rows.map((row) => visibleWidth(row.valueText)))
+    const max = Math.max(...rows.map((row) => row.value))
+    const valueWidth = Math.max(...rows.map((row) => visibleWidth(row.valueText)))
     // 2 + label + 2 + bar + 1 + value
     const barWidth = Math.max(barMin, Math.min(barMax, cols - labelWidth - valueWidth - 5))
     const widths = [labelWidth, barWidth, valueWidth]
@@ -56,19 +50,15 @@ export function barRows(rows: readonly BarRow[], options: BarRowsOptions): strin
         gap: ['  ', ' '],
     }
 
-    const out = options.header ? [formatRow(options.header, widths, layout)] : []
-    for (const row of rows) {
-        out.push(
-            formatRow(
-                [
-                    labelPaint(truncateTo(row.label, labelWidth)),
-                    paint(bar(row.value, max, barWidth)),
-                    dim(row.valueText),
-                ],
-                widths,
-                layout,
-            ),
-        )
-    }
-    return out
+    return rows.map((row) =>
+        formatRow(
+            [
+                labelPaint(truncateTo(row.label, labelWidth)),
+                paint(bar(row.value, max, barWidth)),
+                dim(row.valueText),
+            ],
+            widths,
+            layout,
+        ),
+    )
 }

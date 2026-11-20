@@ -1,14 +1,9 @@
 import type { DocMeta } from '../../content/types.ts'
-import { cyan, dim, yellow } from '../../render/ansi.ts'
-import { barRows, type BarRow } from '../../render/barRows.ts'
+import { dim } from '../../render/ansi.ts'
 import { select } from '../../term/select.ts'
 import { readDoc } from '../reader.ts'
-import { visibleWidth } from '../../render/width.ts'
 import { fail } from '../error.ts'
-import type { Command } from '../types.ts'
-
-const BAR_MAX = 20
-const BAR_MIN = 3
+import type { Command, Ctx } from '../types.ts'
 
 export interface TagBucket {
     readonly tag: string
@@ -36,40 +31,30 @@ export function findTag(buckets: readonly TagBucket[], name: string): TagBucket 
     return buckets.find((bucket) => bucket.tag.toLowerCase() === key)
 }
 
-export function tagsLines(docs: readonly DocMeta[], cols: number): string[] {
-    const buckets = tagBuckets(docs)
-    if (buckets.length === 0) return [dim('还没有任何标签')]
-
-    const labelWidth = Math.max(
-        ...buckets.map((bucket) => visibleWidth(bucket.tag)),
-        // 太长的标签截断，别把柱子挤没
-        Math.min(24, Math.floor(cols / 2)),
-    )
-
-    const rows: BarRow[] = buckets.map((bucket) => ({
-        label: bucket.tag,
-        value: bucket.docs.length,
-        valueText: String(bucket.docs.length),
-    }))
-
-    return [
-        dim(`${buckets.length} 个标签`),
-        '',
-        ...barRows(rows, {
-            cols,
-            labelWidth,
-            labelPaint: cyan,
-            paint: yellow,
-            barMax: BAR_MAX,
-            barMin: BAR_MIN,
-            header: [dim('标签'), '', dim('篇数')],
-        }),
-    ]
-}
-
 /** 某个标签下的文章，新的在前 */
 export function tagDocs(bucket: TagBucket): DocMeta[] {
     return [...bucket.docs].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
+}
+
+/** 列出标签下的文章，选中就读。等价于 `tags <标签>` */
+async function pickTagDocs(ctx: Ctx, bucket: TagBucket): Promise<void> {
+    const docs = tagDocs(bucket)
+    const picked = await select(ctx.term, {
+        title: `${bucket.tag} · ${docs.length} 篇`,
+        labels: { empty: '无内容', footer: '↑↓ 移动 · Enter 打开 · Esc 取消' },
+        items: docs.map((doc) => ({
+            value: doc.slug,
+            label: doc.title,
+            detail: [doc.date, doc.slug].filter(Boolean).join('  '),
+        })),
+    })
+
+    if (!picked) return
+
+    const doc = ctx.content.find(picked)
+    const text = await ctx.content.text(picked)
+    if (!doc || text === undefined) fail(`正文加载失败：${picked}`)
+    await readDoc(ctx, doc, text)
 }
 
 const tags: Command = {
@@ -80,37 +65,39 @@ const tags: Command = {
         const buckets = tagBuckets(ctx.content.docs)
         const wanted = args[0]
 
-        if (!wanted) {
-            for (const line of tagsLines(ctx.content.docs, ctx.term.cols)) ctx.term.println(line)
+        if (wanted) {
+            const bucket = findTag(buckets, wanted)
+            if (!bucket) {
+                const names = buckets
+                    .slice(0, 8)
+                    .map((item) => item.tag)
+                    .join(' / ')
+                fail(`没有这个标签：${wanted}`, `可选：${names}`)
+            }
+            await pickTagDocs(ctx, bucket)
             return
         }
 
-        const bucket = findTag(buckets, wanted)
-        if (!bucket) {
-            const names = buckets
-                .slice(0, 8)
-                .map((item) => item.tag)
-                .join(' / ')
-            fail(`没有这个标签：${wanted}`, `可选：${names}`)
+        if (buckets.length === 0) {
+            ctx.term.println(dim('还没有任何标签'))
+            return
         }
 
-        const docs = tagDocs(bucket)
         const picked = await select(ctx.term, {
-            title: `${bucket.tag} · ${docs.length} 篇`,
-            labels: { empty: '无内容', footer: '↑↓ 移动 · Enter 打开 · Esc 取消' },
-            items: docs.map((doc) => ({
-                value: doc.slug,
-                label: doc.title,
-                detail: [doc.date, doc.slug].filter(Boolean).join('  '),
+            title: '标签',
+            hint: `${buckets.length} 个`,
+            labels: { empty: '无标签', footer: '↑↓ 移动 · Enter 查看 · Esc 取消' },
+            items: buckets.map((bucket) => ({
+                value: bucket.tag,
+                label: bucket.tag,
+                detail: `${bucket.docs.length} 篇`,
             })),
         })
 
         if (!picked) return
 
-        const doc = ctx.content.find(picked)
-        const text = await ctx.content.text(picked)
-        if (!doc || text === undefined) fail(`正文加载失败：${picked}`)
-        await readDoc(ctx, doc, text)
+        const bucket = buckets.find((item) => item.tag === picked)
+        if (bucket) await pickTagDocs(ctx, bucket)
     },
 }
 

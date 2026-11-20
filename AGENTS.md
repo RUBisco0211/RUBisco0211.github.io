@@ -138,12 +138,13 @@ aliases: {
 
 ### 9. 列对齐统一走 `render/table.ts`
 
-ls / help / cat / stats / tags / Tab 补全都是「逐行、若干单元格、按列宽补齐」这一类。
+ls / help / cat / stats / Tab 补全都是「逐行、若干单元格、按列宽补齐」这一类。
 `formatTable(rows, options)` 负责测列宽、逐列补齐、按 gap 拼接、`trimEnd`；
 `formatRow()` 用显式列宽（固定列或多块共享宽度时用），`rowWidth()` 给画横线用。
 单元格可以带 ANSI / OSC 8，宽度一律按 `visibleWidth` 算；**不做截断**，需要截的先 `truncateTo`。
 
-柱状行（label + 柱 + 右对齐数值）抽在 `render/barRows.ts`，stats 和 tags 共用一套布局。
+柱状行（label + 柱 + 右对齐数值）抽在 `render/barRows.ts`，stats 用它排版。
+（tags 的标签总览和文章列表已改成整屏 select，不再走表格。）
 
 neofetch 的信息区是三张小表（个人 / 终端 / 站点），每张表各自用自己的列宽对齐，
 分隔线统一取整块最大宽度；art 与信息区的左右并排仍归 `layout()`。
