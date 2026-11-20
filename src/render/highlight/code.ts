@@ -17,7 +17,7 @@ import md from '@speed-highlight/core/languages/md.js'
 import py from '@speed-highlight/core/languages/py.js'
 import ts from '@speed-highlight/core/languages/ts.js'
 import yaml from '@speed-highlight/core/languages/yaml.js'
-import { blue, cyan, dim, green, magenta, red, yellow, type Style } from './ansi.ts'
+import { blue, cyan, dim, green, magenta, red, yellow, type Style } from '../ansi.ts'
 
 export type Lang = 'bash' | 'js' | 'ts' | 'json' | 'yaml' | 'diff' | 'go' | 'py' | 'md' | 'plain'
 
@@ -83,10 +83,6 @@ const ALIASES: Record<string, Lang> = {
 export function normalizeLang(lang: string | undefined): Lang {
     if (!lang) return 'plain'
     return ALIASES[lang.trim().toLowerCase()] ?? 'plain'
-}
-
-export function grammarFor(lang: Lang): ShjLanguageData | undefined {
-    return lang === 'plain' ? undefined : GRAMMARS[lang]
 }
 
 /**

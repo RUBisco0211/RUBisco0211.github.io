@@ -13,7 +13,7 @@ import type { Token, Tokens } from 'marked'
 import { blue, bold, cyan, dim, hyperlink, italic, magenta, yellow } from './ansi.ts'
 import { wrapAnsi } from './wrap.ts'
 import { padEnd, stripAnsi, truncateTo, visibleWidth } from './width.ts'
-import { highlightCode, normalizeLang } from './highlight.ts'
+import { highlightCode, normalizeLang } from './highlight/code.ts'
 
 const link = (href: string, text: string): string => hyperlink(href, blue(text))
 

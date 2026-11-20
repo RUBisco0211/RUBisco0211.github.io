@@ -173,7 +173,7 @@ test('高亮不会打乱屏幕内容和光标', async () => {
     }
     const { default: headless } = await import('@xterm/headless')
     const { Readline } = await import('xterm-readline')
-    const { highlightLine } = await import('../../src/shell/highlight-line.ts')
+    const { highlightLine } = await import('../../src/render/highlight/line.ts')
 
     const term = new headless.Terminal({ cols: 40, rows: 10, allowProposedApi: true })
     term.attachCustomKeyEventHandler = () => {}
