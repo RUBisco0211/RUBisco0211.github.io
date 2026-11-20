@@ -32,8 +32,8 @@ test('引号里的内容着绿色', () => {
 })
 
 test('参数和路径一律不着色', () => {
-    const out = highlightLine('cat blog/从nvm迁移到fnm', classify)
-    assert.equal(out.replace(/\x1b\[[0-9;]*m/g, ''), 'cat blog/从nvm迁移到fnm')
+    const out = highlightLine('cat blog/some/path', classify)
+    assert.equal(out.replace(/\x1b\[[0-9;]*m/g, ''), 'cat blog/some/path')
     // 只有命令本身带样式
     assert.equal((out.match(/\x1b\[3[0-7]m/g) ?? []).length, 1)
 })

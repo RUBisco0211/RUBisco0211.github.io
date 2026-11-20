@@ -16,10 +16,10 @@ const doc = (slug: string, extra: Partial<DocMeta> = {}): DocMeta => ({
 
 const docs: DocMeta[] = [
     doc('about', { kind: 'page' }),
-    doc('blog/从nvm迁移到fnm', { date: '2026-04-06' }),
-    doc('blog/为开源项目贡献代码'),
+    doc('blog/阿明', { date: '2026-04-06' }),
+    doc('blog/白杨'),
     doc('blog/2026/hello'),
-    doc('projects/unipac', { kind: 'project' }),
+    doc('projects/demo', { kind: 'project' }),
 ]
 
 test('buildFs 逐级建出目录', () => {
@@ -48,7 +48,7 @@ test('name 由 slug 最后一段决定', () => {
 test('中文名按拼音排序', () => {
     const fs = buildFs(docs)
     const names = fs.get('/blog')?.files.map((f) => f.name) ?? []
-    assert.deepEqual(names, ['从nvm迁移到fnm', '为开源项目贡献代码'])
+    assert.deepEqual(names, ['阿明', '白杨'])
 })
 
 test('isDir / findFile / allFiles', () => {
@@ -66,7 +66,7 @@ test('lookup 相对 cwd 解析，并接受 .md 扩展名', () => {
     const dir = lookup(fs, '/', 'blog')
     assert.equal(dir.kind, 'dir')
 
-    const file = lookup(fs, '/blog', '从nvm迁移到fnm')
+    const file = lookup(fs, '/blog', '阿明')
     assert.equal(file.kind, 'file')
     if (file.kind === 'file') assert.equal(file.file.date, '2026-04-06')
 

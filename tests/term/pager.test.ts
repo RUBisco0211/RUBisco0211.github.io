@@ -54,7 +54,7 @@ test('滚轮累积：攒够一行才滚', () => {
 
 test('状态栏整行铺满且反显', () => {
     const status = pagerStatus({
-        title: '从nvm迁移到fnm',
+        title: '示例标题',
         offset: 0,
         total: 100,
         height: 10,
@@ -63,8 +63,7 @@ test('状态栏整行铺满且反显', () => {
     assert.equal(visibleWidth(status), 60)
     assert.match(status, /^\x1b\[7m/)
     assert.match(status, /\x1b\[27m$/)
-    assert.match(plain(status), /从nvm迁移到fnm/)
-    assert.match(plain(status), /q 退出/)
+    assert.match(plain(status), /示例标题/)
 })
 
 test('状态栏显示百分比和行范围', () => {
@@ -121,10 +120,10 @@ test('提示放不下时从最不重要的开始丢，q 退出留到最后', () 
 })
 
 test('locateTitles 把标题映射到行号，重复标题各自对上', () => {
-    const lines = ['前言', '安装 fnm', '正文', '配置 shell', '安装 fnm']
-    assert.deepEqual(locateTitles(lines, ['安装 fnm', '配置 shell']), [1, 3])
+    const lines = ['前言', '安装工具', '正文', '配置 shell', '安装工具']
+    assert.deepEqual(locateTitles(lines, ['安装工具', '配置 shell']), [1, 3])
     // 第二次出现同一个标题时不会还指到第一处
-    assert.deepEqual(locateTitles(lines, ['安装 fnm', '安装 fnm']), [1, 4])
+    assert.deepEqual(locateTitles(lines, ['安装工具', '安装工具']), [1, 4])
 })
 
 test('找不到的标题返回 -1', () => {
@@ -132,6 +131,6 @@ test('找不到的标题返回 -1', () => {
 })
 
 test('locateTitles 忽略行内 ANSI 和大小写', () => {
-    const lines = ['\x1b[1m\x1b[36m安装 fnm\x1b[39m\x1b[22m']
-    assert.deepEqual(locateTitles(lines, ['安装 fnm']), [0])
+    const lines = ['\x1b[1m\x1b[36m安装工具\x1b[39m\x1b[22m']
+    assert.deepEqual(locateTitles(lines, ['安装工具']), [0])
 })

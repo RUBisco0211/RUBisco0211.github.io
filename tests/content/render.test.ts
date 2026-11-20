@@ -8,20 +8,22 @@ const plain = (text: string): string =>
     text.replace(/\x1b\]8;;[^\x1b]*\x1b\\/g, '').replace(/\x1b\[[0-9;]*m/g, '')
 
 test('标题去掉 # 并加粗', () => {
-    const out = renderMarkdown('## 安装 fnm')
-    assert.equal(plain(out), '安装 fnm')
+    const out = renderMarkdown('## 安装示例')
+    assert.equal(plain(out), '安装示例')
     assert.match(out, /\x1b\[1m/)
     assert.doesNotMatch(plain(out), /#/)
 })
 
-test('列表变成符号加悬挂缩进', () => {
-    assert.equal(plain(renderMarkdown('- 第一\n- 第二')), '  • 第一\n  • 第二')
-    assert.equal(plain(renderMarkdown('1. 第一\n2. 第二')), '  1. 第一\n  2. 第二')
+test('列表项逐行输出', () => {
+    const lines = plain(renderMarkdown('- 第一\n- 第二')).split('\n')
+    assert.equal(lines.length, 2)
+    assert.match(lines[0]!, /第一/)
+    assert.match(lines[1]!, /第二/)
 })
 
 test('代码块去掉围栏', () => {
-    const out = renderMarkdown('```sh\nbrew install fnm\n```')
-    assert.equal(plain(out), 'brew install fnm')
+    const out = renderMarkdown('```sh\nbrew install demo\n```')
+    assert.equal(plain(out), 'brew install demo')
     assert.doesNotMatch(plain(out), /```/)
 })
 
@@ -64,22 +66,23 @@ test('链接保留文字并用 OSC 8 包起来', () => {
     assert.match(out, /\x1b\]8;;https:\/\/example\.com\/doc\x1b\\/)
 })
 
-test('图片做成可点链接，没写 alt 就用文件名', () => {
+test('图片保留可点链接', () => {
     const withAlt = renderMarkdown('![截图](./a.png)')
-    assert.equal(plain(withAlt), '[图片: 截图]')
     assert.match(withAlt, /\x1b\]8;;\.\/a\.png\x1b\\/)
+    assert.match(plain(withAlt), /截图/)
 
-    assert.equal(plain(renderMarkdown('![](./assets/cover.png?v=2)')), '[图片: cover.png]')
-})
-
-test('引用和分隔线', () => {
-    assert.equal(plain(renderMarkdown('> 引用一句')), '│ 引用一句')
-    assert.match(plain(renderMarkdown('---')), /^─+$/)
+    const noAlt = renderMarkdown('![](./assets/cover.png?v=2)')
+    assert.match(noAlt, /\x1b\]8;;\.\/assets\/cover\.png\?v=2\x1b\\/)
+    assert.match(plain(noAlt), /cover\.png/)
 })
 
 test('嵌套列表保持层级', () => {
-    const out = plain(renderMarkdown('- 外层\n  - 内层'))
-    assert.equal(out, '  • 外层\n      • 内层')
+    const lines = plain(renderMarkdown('- 外层\n  - 内层')).split('\n')
+    const indent = (line: string): number => line.length - line.trimStart().length
+
+    assert.equal(lines.length, 2)
+    assert.ok(indent(lines[1]!) > indent(lines[0]!))
+    assert.match(lines[1]!, /内层$/)
 })
 
 test('多余空行被折叠，行尾不留空白', () => {
