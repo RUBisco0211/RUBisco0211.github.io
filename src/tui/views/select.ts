@@ -3,6 +3,7 @@ import type { TuiDriver } from '@/term/driver.ts'
 import { lookupKey, resolveKeys, type Keymap } from '@/term/keys.ts'
 import type { Canvas } from '@/tui/canvas.ts'
 import { ListCursor } from '@/tui/components/list.ts'
+import { WheelLines } from '@/tui/components/scroll.ts'
 import { TextInput } from '@/tui/components/text-input.ts'
 import { TuiSession } from '@/tui/session.ts'
 import type { TuiView } from '@/tui/view.ts'
@@ -72,6 +73,7 @@ export class SelectView<T> implements TuiView {
     private readonly keymap: ReadonlyMap<string, SelectAction>
     private readonly list: ListCursor
     private readonly filter = new TextInput()
+    private readonly wheelLines = new WheelLines()
     private items: readonly SelectItem<T>[]
 
     private settle!: (value: T | undefined) => void
@@ -120,6 +122,13 @@ export class SelectView<T> implements TuiView {
                 ? this.options.labels.empty
                 : `${this.list.index + 1}/${this.items.length}`
         canvas.put(canvas.rows - 1, dim(`${position}　${this.options.labels.footer}`))
+    }
+
+    /** 滚轮上下移动选中项（ListCursor 会让它一直在视口里） */
+    wheel(deltaY: number, deltaMode: number): void {
+        const lines = this.wheelLines.take(deltaY, deltaMode)
+        if (lines === 0) return
+        if (this.list.move(lines)) this.highlight()
     }
 
     key(event: KeyboardEvent): void {

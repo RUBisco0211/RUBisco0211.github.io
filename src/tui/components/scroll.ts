@@ -15,6 +15,40 @@ function wheelLines(deltaY: number, deltaMode: number, pixelsPerLine: number): n
     return deltaY / pixelsPerLine
 }
 
+/**
+ * 滚轮 → 整行。
+ *
+ * trackpad 一次 delta 只有几像素，必须按像素累积，攒够一行才吐；
+ * 鼠标一格约 100px ≈ 1.25 行。滚动器和列表选择共用。
+ */
+export class WheelLines {
+    private pixels = 0
+    private readonly pixelsPerLine: number
+
+    constructor(pixelsPerLine = PIXELS_PER_LINE) {
+        this.pixelsPerLine = pixelsPerLine
+    }
+
+    /** 喂一次滚轮，返回应移动的整行数（0 表示还不足一行） */
+    take(deltaY: number, deltaMode = 0): number {
+        this.pixels +=
+            deltaMode === 0
+                ? deltaY
+                : wheelLines(deltaY, deltaMode, this.pixelsPerLine) * this.pixelsPerLine
+
+        const whole = Math.trunc(this.pixels / this.pixelsPerLine)
+        if (whole === 0) return 0
+
+        this.pixels -= whole * this.pixelsPerLine
+        return whole
+    }
+
+    /** 到边界或视图切换时丢掉余量，免得反向先空转 */
+    reset(): void {
+        this.pixels = 0
+    }
+}
+
 export interface ScrollOptions {
     readonly total?: number
     readonly height?: number
@@ -31,13 +65,12 @@ export class Scroll {
     private position = 0
     private count: number
     private view: number
-    private readonly pixelsPerLine: number
-    private pixels = 0
+    private readonly wheelLines: WheelLines
 
     constructor(options: ScrollOptions = {}) {
         this.count = options.total ?? 0
         this.view = Math.max(1, options.height ?? 1)
-        this.pixelsPerLine = options.pixelsPerLine ?? PIXELS_PER_LINE
+        this.wheelLines = new WheelLines(options.pixelsPerLine ?? PIXELS_PER_LINE)
     }
 
     get offset(): number {
@@ -99,17 +132,10 @@ export class Scroll {
 
     /** 滚轮：返回是否真的滚动了。滚到头时丢掉攒着的余量。 */
     wheel(deltaY: number, deltaMode = 0): boolean {
-        this.pixels +=
-            deltaMode === 0
-                ? deltaY
-                : wheelLines(deltaY, deltaMode, this.pixelsPerLine) * this.pixelsPerLine
-
-        const whole = Math.trunc(this.pixels / this.pixelsPerLine)
-        if (whole === 0) return false
-
-        this.pixels -= whole * this.pixelsPerLine
-        if (this.scrollBy(whole)) return true
-        this.pixels = 0
+        const lines = this.wheelLines.take(deltaY, deltaMode)
+        if (lines === 0) return false
+        if (this.scrollBy(lines)) return true
+        this.wheelLines.reset()
         return false
     }
 }

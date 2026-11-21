@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'vitest'
-import { filterItems } from '@/tui/views/select.ts'
+import { filterItems, SelectView } from '@/tui/views/select'
 import { clampWindow } from '@/tui/components/list.ts'
+import type { Canvas } from '@/tui/canvas.ts'
 
 test('选中项在窗口内时不动', () => {
     assert.equal(clampWindow(3, 0, 5), 0)
@@ -70,4 +71,75 @@ test('label 和 detail 都命中时不重复', () => {
         filterItems(items, '2025').map((i) => i.value),
         ['a'],
     )
+})
+
+const items = Array.from({ length: 10 }, (_, index) => ({
+    value: index,
+    label: `item${index}`,
+}))
+
+const makeView = (
+    onHighlight?: (item: { value: number }, index: number) => void,
+): SelectView<number> =>
+    new SelectView({
+        title: 't',
+        labels: { empty: '', footer: '' },
+        items,
+        onHighlight,
+    })
+
+function fakeCanvas(rows: number, cols = 40) {
+    const drawn: Array<{ row: number; text: string }> = []
+    return {
+        canvas: {
+            rows,
+            cols,
+            put: (row: number, text: string) => void drawn.push({ row, text }),
+            clear: () => {},
+            status: () => {},
+            write: () => {},
+        } as unknown as Canvas,
+        drawn,
+    }
+}
+
+test('滚轮一格移动选中项，并回调 onHighlight', () => {
+    const seen: number[] = []
+    const view = makeView((_item, index) => seen.push(index))
+    view.wheel(80, 0)
+    assert.deepEqual(seen, [0, 1])
+})
+
+test('滚轮按像素累积，不足一行不动', () => {
+    const seen: number[] = []
+    const view = makeView((_item, index) => seen.push(index))
+    // 小 delta 累积：40px + 40px 攒够一行
+    view.wheel(40, 0)
+    assert.deepEqual(seen, [0])
+    view.wheel(40, 0)
+    assert.deepEqual(seen, [0, 1])
+})
+
+test('滚轮不会越过第一项', () => {
+    const seen: number[] = []
+    const view = makeView((_item, index) => seen.push(index))
+    view.wheel(-80, 0)
+    assert.deepEqual(seen, [0])
+})
+
+test('滚轮移动后，选中行始终在视口内', () => {
+    const view = makeView()
+    const { canvas, drawn } = fakeCanvas(6) // 可视区 = 6 - 3 = 3 行
+    view.draw(canvas)
+
+    for (let i = 0; i < 5; i += 1) view.wheel(80, 0)
+
+    drawn.length = 0
+    view.draw(canvas)
+    // cyan() 会给 marker 和 label 各包一层 ANSI，按 label 找行、再看行里有没有 '>'
+    const active = drawn.find((line) => line.text.includes('item5'))
+    assert.ok(active, '选中项应被画出来')
+    assert.ok(active.text.includes('>'))
+    // 第 0 行是标题、最后一行是 footer，列表只占 1..3
+    assert.ok(active.row >= 1 && active.row <= 3)
 })
