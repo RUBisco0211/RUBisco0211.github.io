@@ -32,8 +32,8 @@ src/
   term/               xterm 封装、pager/select 整屏组件、命令历史
     pager/             index.ts 交互循环 + logic.ts 纯逻辑
   shell/              tokenize / alias / registry / fs / path / complete / error
-    commands/         一个文件一条命令，默认导出 Command 即自动注册
-                      （reader.ts 这类命令支撑件没有默认导出，会被跳过）
+    commands/         一条命令一个文件 + 手动在 index.ts 注册
+                      （reader.ts 这类命令支撑件也放这里，但不进命令表）
   content/            内容树视图、字数格式化、搜索
   theme/              themes/<名字>.ts（每套含 light/dark 两个变体）+ 聚合 + store
 plugins/site-content.ts   content/ → virtual:site-tree
@@ -87,12 +87,13 @@ interface Ctx {
   `term.printError()` 统一染红；可选提示用第二参数（如可选值列表）。意外异常不吞，继续抛给 `main.ts` 兜底。
   错误怎么渲染是终端层的事（`Term.printError`），shell 只给消息和提示。
 
-### 3. 命令自动注册
+### 3. 命令注册是手动的
 
-`src/shell/commands/index.ts` 用 `import.meta.glob(['./*.ts', '!./index.ts'], { eager: true })` 收集，
-只收有默认导出的模块。
-新增命令 = 丢一个文件进 `commands/`，默认导出一个 `Command`。别处零改动。
-（命令顺序不影响展示：`registry.list()` 自己按名字排序。）
+`src/shell/commands/index.ts` 显式 import 每条命令并拼成 `commands` 数组。
+新增命令 = 新建 `commands/<name>.ts` + 在 `index.ts` 里加一行 import 和一个数组项。
+
+不用 `import.meta.glob` 自动收集：那是 Vite 专属 API，`node --test` 里 import
+这个入口会直接报错；显式列表还能让 tsc 立刻发现漏接。
 
 ### 4. alias 是单层纯 token 替换
 
@@ -201,32 +202,27 @@ gh api -X PUT repos/RUBisco0211/RUBisco0211.github.io/pages -f build_type=workfl
    `Term.read(prompt, initial)` 靠"排一个空 write 再 updateLine"来等 readline 建好 state。
    `tests/term/readline.test.mjs` 里有一份同样的调用序列——它是**副本**，改 `terminal.ts` 时必须手动同步，否则测试全绿但行为已坏（已经发生过一次）。
 
-2. **`commands/index.ts` 是 Vite 专属的**
-   它用 `import.meta.glob` 收集命令，而这个 API 只存在于 Vite 构建/开发环境。
-   `node --test` 里 import 它会直接报 `glob is not a function`。所以测试**只能单独 import
-   具体命令文件**（如 `tests/shell/shell.test.ts` 那样），不要 import 这个聚合入口。
-
-3. **FitAddon 读的是父元素的 computed `height`**
+2. **FitAddon 读的是父元素的 computed `height`**
    它只扣掉 `.xterm` 自己的 padding，**不管父元素的 padding**。所以终端必须放在无内边距的 `#term` 里，留白由外层 `#app` 负责。否则会多算出行数，最后一行被裁掉。
 
-4. **字体是异步的**
+3. **字体是异步的**
    首帧用回退字体算出的行高偏小，真字体到位后单元格变高，屏幕会超出容器。所以 `Term` 在 `document.fonts.ready` 和 `loadingdone` 时都要重新 `fit()`。
 
-5. **prettier 必须跑**
+4. **prettier 必须跑**
    `terminal.ts` 曾被编辑器改成双引号 + 分号，导致脚本替换静默失败、改动没生效。
    `.prettierrc` 已定死：无分号、单引号、printWidth 100。`content/` 不在格式化范围内（手写内容）。
 
-6. **CJK 对齐要用 `visibleWidth()`**
+5. **CJK 对齐要用 `visibleWidth()`**
    按 `text.length` 算会把中文和 ANSI 转义序列一起算错。对齐用 `padEnd()`（在 `src/render/width.ts`）。
 
-7. **`clear` 的时机**
+6. **`clear` 的时机**
    `xterm.clear()` 会让 readline 的 `promptMarker` 失效，只能在两次 `read()` 之间调用。
 
-8. **回车后命令行不带颜色**
+7. **回车后命令行不带颜色**
    readline 提交前会调 `State.refreshUnhighlighted()` 把这行重绘成无样式。试过覆盖它让颜色保留，
    但那是改库的内部行为，权衡后撤掉了（`tests/term/readline.test.mjs` 里那条用例记录着默认行为）。
 
-9. **定时器要清干净**
+8. **定时器要清干净**
    `matrix` 和 pager 的 resize 防抖都用 `setTimeout`。退出路径必须 `clearTimeout` + 摘掉
    `captureKeys`/`onResize` 的监听，否则退出后还在往终端写东西。用裸 `setTimeout` 而不是
    `window.setTimeout`——测试在 node 里跑，`window` 不存在。

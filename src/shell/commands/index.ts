@@ -1,15 +1,42 @@
 import type { Command } from '../types.ts'
+import ansi from './ansi.ts'
+import cat from './cat.ts'
+import cd from './cd.ts'
+import clear from './clear.ts'
+import echo from './echo.ts'
+import help from './help.ts'
+import history from './history.ts'
+import ls from './ls.ts'
+import matrix from './matrix.ts'
+import neofetch from './neofetch.ts'
+import pwd from './pwd.ts'
+import search from './search.ts'
+import stats from './stats.ts'
+import tags from './tags.ts'
+import theme from './theme.ts'
+import tree from './tree.ts'
 
 /**
- * 自动注册：本目录下除了 index.ts 的所有模块，若默认导出一个 Command 就收进来。
+ * 命令表。手动注册：新增命令要在这里加一行 import + 数组项。
  *
- * `reader.ts` 这种命令支撑件没有默认导出，会被下面的 filter 自然跳过，
- * 所以「丢一个文件进 commands/，别处零改动」依然成立。
+ * 不用 `import.meta.glob` 自动收集 —— 那是 Vite 专属 API，node 测试里 import
+ * 这个入口会直接报错；显式列表还能让 tsc 立刻发现漏接。
  */
-const modules = import.meta.glob<{ default?: Command }>(['./*.ts', '!./index.ts'], {
-    eager: true,
-})
-
-export const commands: readonly Command[] = Object.values(modules)
-    .map((module) => module.default)
-    .filter((command): command is Command => command !== undefined)
+export const commands: readonly Command[] = [
+    ansi,
+    cat,
+    cd,
+    clear,
+    echo,
+    help,
+    history,
+    ls,
+    matrix,
+    neofetch,
+    pwd,
+    search,
+    stats,
+    tags,
+    theme,
+    tree,
+]
