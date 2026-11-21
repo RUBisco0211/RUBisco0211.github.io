@@ -23,6 +23,14 @@ export interface ScreenOptions {
 
 export type FlashPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 
+/** 每个位置贴哪边。用表查，不从字面量里 substr。 */
+const FLASH_ANCHOR: Record<FlashPosition, { readonly top: boolean; readonly left: boolean }> = {
+    'top-left': { top: true, left: true },
+    'top-right': { top: true, left: false },
+    'bottom-left': { top: false, left: true },
+    'bottom-right': { top: false, left: false },
+}
+
 export interface FlashOptions {
     /** 提示位置，默认 'top-right' */
     readonly position?: FlashPosition
@@ -114,9 +122,9 @@ export class Screen {
         const width = visibleWidth(label)
         if (width >= this.cols) return
 
-        const position = options.position ?? 'top-right'
-        const row = position.startsWith('top') ? 1 : this.rows
-        const col = position.endsWith('left') ? 1 : this.cols - width + 1
+        const anchor = FLASH_ANCHOR[options.position ?? 'top-right']
+        const row = anchor.top ? 1 : this.rows
+        const col = anchor.left ? 1 : this.cols - width + 1
         const paint = options.paint ?? inverse
 
         this.write(`${moveTo(row, col)}${paint(label)}${moveTo(this.rows, this.cols)}`)
