@@ -49,12 +49,19 @@ function setup(aliases: Record<string, string> = {}, extra: readonly Command[] =
         write: () => {},
         cols: 80,
         rows: 24,
-        // select 会接管键盘，这里直接模拟按键退出
-        captureKeys: (handler: (event: KeyboardEvent) => void) => {
-            queueMicrotask(() => handler({ key: keys.next } as KeyboardEvent))
+        // select 会接管输入，这里直接模拟按键退出
+        captureInput: (handlers: { onKey: (event: KeyboardEvent) => void }) => {
+            queueMicrotask(() => handlers.onKey({ key: keys.next } as KeyboardEvent))
             return () => {}
         },
+        enterAltScreen: () => {},
+        exitAltScreen: () => {},
+        drawRow: () => {},
         onResize: () => () => {},
+        hasSelection: () => false,
+        getSelection: () => '',
+        clearSelection: () => {},
+        copy: async () => true,
         historyEntries: () => historyEntries,
         appendHistory: () => {},
         clearHistory: () => {},

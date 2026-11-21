@@ -1,7 +1,8 @@
 import { completePath } from '@/shell/complete.ts'
 import { fail, printUsage } from '@/shell/error.ts'
 import { lookup, type FileEntry } from '@/shell/fs.ts'
-import { readDoc } from '@/utils/reader.ts'
+import { toPagerInput } from '@/shell/commands/utils/pager-input.ts'
+import { runPager } from '@/tui/views/pager.ts'
 import type { Command, Ctx } from '@/shell/types.ts'
 
 export interface ResolvedDoc {
@@ -38,7 +39,7 @@ const cat: Command = {
     complete: (ctx, _argv, current) => completePath(ctx, current),
     async run(ctx, args) {
         const { doc, text } = await resolveDoc(ctx, cat, args)
-        await readDoc(ctx.term, doc, text)
+        await runPager(ctx.term, toPagerInput(doc, text))
     },
 }
 

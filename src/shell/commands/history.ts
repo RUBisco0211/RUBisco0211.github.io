@@ -1,5 +1,5 @@
 import { dim, green } from '@/render/ansi.ts'
-import { select } from '@/term/tui/components/select.ts'
+import { select } from '@/tui/views/select'
 import type { Command } from '@/shell/types.ts'
 
 const history: Command = {

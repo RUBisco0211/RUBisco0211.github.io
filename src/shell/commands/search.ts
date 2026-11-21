@@ -1,8 +1,9 @@
 import { searchDocs } from '@/content/search.ts'
 import type { SearchHit } from '@/content/search.ts'
 import { dim } from '@/render/ansi.ts'
-import { select } from '@/term/tui/components/select.ts'
-import { readDoc } from '@/utils/reader.ts'
+import { select } from '@/tui/views/select'
+import { toPagerInput } from '@/shell/commands/utils/pager-input.ts'
+import { runPager } from '@/tui/views/pager.ts'
 import { fail, printUsage } from '@/shell/error.ts'
 import type { Command } from '@/shell/types.ts'
 
@@ -35,7 +36,7 @@ const search: Command = {
 
         const text = await ctx.content.text(picked.doc.slug)
         if (text === undefined) fail(`正文加载失败：${picked.doc.slug}`)
-        await readDoc(ctx.term, picked.doc, text, { focus: picked.term })
+        await runPager(ctx.term, toPagerInput(picked.doc, text, { focus: picked.term }))
     },
 }
 
