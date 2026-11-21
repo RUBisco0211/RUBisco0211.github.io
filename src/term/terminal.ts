@@ -214,8 +214,8 @@ export class Term {
     /**
      * 把文本写进系统剪贴板。
      *
-     * clipboard API 只在安全上下文可用（HTTPS / localhost），失败时退回
-     * execCommand。两者都失败返回 false，由调用方决定怎么提示。
+     * 用 Clipboard API（只在安全上下文可用：HTTPS / localhost）。不可用或权限被拒时
+     * 返回 false，由调用方提示用户手动复制。
      */
     async copy(text: string): Promise<boolean> {
         if (text === '') return false
@@ -224,23 +224,7 @@ export class Term {
             await navigator.clipboard.writeText(text)
             return true
         } catch {
-            // 非安全上下文或权限被拒，走兜底
-        }
-
-        const area = document.createElement('textarea')
-        area.value = text
-        area.setAttribute('readonly', '')
-        area.style.position = 'fixed'
-        area.style.opacity = '0'
-        document.body.appendChild(area)
-        area.select()
-
-        try {
-            return document.execCommand('copy')
-        } catch {
             return false
-        } finally {
-            area.remove()
         }
     }
 
