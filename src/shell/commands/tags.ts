@@ -4,7 +4,7 @@ import { select } from '@/tui/views/select'
 import { toPagerInput } from '@/shell/commands/utils/pager-input.ts'
 import { runPager } from '@/tui/views/pager.ts'
 import { fail } from '@/shell/error.ts'
-import type { Command, Ctx } from '@/shell/types.ts'
+import type { Command, Completion, Ctx } from '@/shell/types.ts'
 
 interface TagBucket {
     readonly tag: string
@@ -24,6 +24,14 @@ function tagBuckets(docs: readonly DocMeta[]): TagBucket[] {
     return [...map.entries()]
         .map(([tag, items]) => ({ tag, docs: items }))
         .sort((a, b) => b.docs.length - a.docs.length || a.tag.localeCompare(b.tag, 'zh-Hans-CN'))
+}
+
+/** 补全标签名（只在第一个参数位置用），带篇数说明 */
+export function completeTags(docs: readonly DocMeta[], current: string): Completion[] {
+    const prefix = current.trim().toLowerCase()
+    return tagBuckets(docs)
+        .filter((bucket) => bucket.tag.toLowerCase().startsWith(prefix))
+        .map((bucket) => ({ value: bucket.tag, description: `${bucket.docs.length} 篇` }))
 }
 
 /** 找标签，忽略大小写 */
@@ -62,6 +70,10 @@ const tags: Command = {
     name: 'tags',
     description: '标签列表',
     usage: 'tags [标签]',
+    complete(ctx, argv, current) {
+        // 只补第一个参数；已经写了一个标签就不再补
+        return argv.length === 0 ? completeTags(ctx.content.docs, current) : []
+    },
     async run(ctx, args) {
         const buckets = tagBuckets(ctx.content.docs)
         const wanted = args[0]
