@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'vitest'
-import { TextInput } from '@/term/tui/text-input.ts'
+import { TextInput } from '@/tui/components/text-input.ts'
 
 const key = (k: string, mods: Partial<KeyboardEvent> = {}): KeyboardEvent =>
     ({

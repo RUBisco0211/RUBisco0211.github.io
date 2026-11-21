@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'vitest'
-import { statusBar } from '@/term/tui/status.ts'
+import { statusBar } from '@/tui/components/status.ts'
 import { visibleWidth } from '@/render/width.ts'
 import { MIN_COLS } from '@/term/size.ts'
 

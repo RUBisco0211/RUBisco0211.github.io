@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'vitest'
-import { filterItems } from '@/term/tui/components/select.ts'
-import { clampWindow } from '@/term/tui/list.ts'
+import { filterItems } from '@/tui/views/select.ts'
+import { clampWindow } from '@/tui/components/list.ts'
 
 test('选中项在窗口内时不动', () => {
     assert.equal(clampWindow(3, 0, 5), 0)
