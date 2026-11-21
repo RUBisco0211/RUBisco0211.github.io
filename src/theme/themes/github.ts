@@ -1,4 +1,4 @@
-import type { Theme } from '../types.ts'
+import type { Theme } from '@/theme/types.ts'
 
 /** GitHub Dark / Light */
 export const github: Theme = {

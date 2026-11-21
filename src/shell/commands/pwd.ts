@@ -1,5 +1,5 @@
-import { displayPath } from '../path.ts'
-import type { Command } from '../types.ts'
+import { displayPath } from '@/shell/path.ts'
+import type { Command } from '@/shell/types.ts'
 
 const pwd: Command = {
     name: 'pwd',

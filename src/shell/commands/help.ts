@@ -1,7 +1,7 @@
-import { bold, cyan, dim } from '../../render/ansi.ts'
-import { columnWidths, formatRow } from '../../render/table.ts'
-import { fail } from '../error.ts'
-import type { Command } from '../types.ts'
+import { bold, cyan, dim } from '@/render/ansi.ts'
+import { columnWidths, formatRow } from '@/render/table.ts'
+import { fail } from '@/shell/error.ts'
+import type { Command } from '@/shell/types.ts'
 
 const help: Command = {
     name: 'help',

@@ -1,7 +1,7 @@
-import type { SiteConfig } from '../config.ts'
-import type { ContentStore } from '../content/store.ts'
-import type { Term } from '../term/terminal.ts'
-import type { ThemeStore } from '../theme/store.ts'
+import type { SiteConfig } from '@/config.ts'
+import type { ContentStore } from '@/content/store.ts'
+import type { Term } from '@/term/terminal.ts'
+import type { ThemeStore } from '@/theme/store.ts'
 import type { Fs } from './fs.ts'
 import type { Registry } from './registry.ts'
 

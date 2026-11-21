@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { findTheme, themes } from '../../src/theme/index.ts'
-import { config } from '../../src/config.ts'
-import type { Palette } from '../../src/theme/types.ts'
+import { test } from 'vitest'
+import { findTheme, themes } from '@/theme/index.ts'
+import { config } from '@/config.ts'
+import type { Palette } from '@/theme/types.ts'
 
 const ANSI_KEYS = [
     'black',

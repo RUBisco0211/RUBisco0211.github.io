@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { displayPath, normalize, resolvePath, splitPath } from '../../src/shell/path.ts'
+import { test } from 'vitest'
+import { displayPath, normalize, resolvePath, splitPath } from '@/shell/path.ts'
 
 test('normalize 折叠斜杠并处理 . 和 ..', () => {
     assert.equal(normalize('/'), '/')

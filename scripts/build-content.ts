@@ -11,7 +11,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 import matter from 'gray-matter'
-import type { DocKind, DocMeta, SiteTree } from '../src/content/types.ts'
+import type { DocKind, DocMeta, SiteTree } from '@/content/types.ts'
 
 const ROOT = resolve(import.meta.dirname, '..')
 

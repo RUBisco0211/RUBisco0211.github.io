@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { highlightLine } from '../../../src/render/highlight/line.ts'
+import { test } from 'vitest'
+import { highlightLine } from '@/render/highlight/line.ts'
 
 const strip = (text: string): string => text.replace(/\x1b\[[0-9;]*m/g, '')
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { afterEach, beforeEach, test } from 'node:test'
-import { readStored, takeLegacy, writeStored } from '../src/storage.ts'
+import { afterEach, beforeEach, test } from 'vitest'
+import { readStored, takeLegacy, writeStored } from '@/storage.ts'
 import { installFakeStorage } from './helpers/fakeStorage.ts'
 
 let storage: Storage

@@ -1,7 +1,7 @@
-import { bold, cyan, dim } from '../../../render/ansi.ts'
-import { lookupKey, resolveKeys, type Keymap } from '../../keys.ts'
-import type { Term } from '../../terminal.ts'
-import { Screen } from '../screen.ts'
+import { bold, cyan, dim } from '@/render/ansi.ts'
+import { lookupKey, resolveKeys, type Keymap } from '@/term/keys.ts'
+import type { Term } from '@/term/terminal.ts'
+import { Screen } from '@/term/tui/screen.ts'
 
 export interface SelectItem<T> {
     readonly value: T

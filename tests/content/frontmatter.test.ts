@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { stripFrontmatter } from '../../src/content/frontmatter.ts'
+import { test } from 'vitest'
+import { stripFrontmatter } from '@/content/frontmatter.ts'
 
 test('只去掉开头的 frontmatter 块', () => {
     assert.equal(stripFrontmatter('---\ntitle: x\n---\n正文'), '正文')

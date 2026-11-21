@@ -1,9 +1,9 @@
-import type { DocMeta } from '../../content/types.ts'
-import { bold, cyan, dim, yellow } from '../../render/ansi.ts'
-import { barRows, type BarRow } from '../../render/barRows.ts'
-import { formatChars, formatCount } from '../../content/format.ts'
-import { visibleWidth } from '../../render/width.ts'
-import type { Command } from '../types.ts'
+import type { DocMeta } from '@/content/types.ts'
+import { bold, cyan, dim, yellow } from '@/render/ansi.ts'
+import { barRows, type BarRow } from '@/render/barRows.ts'
+import { formatChars, formatCount } from '@/content/format.ts'
+import { visibleWidth } from '@/render/width.ts'
+import type { Command } from '@/shell/types.ts'
 
 /** 柱宽上下限（窄终端下保证还能看出高低） */
 const BAR_MAX = 24

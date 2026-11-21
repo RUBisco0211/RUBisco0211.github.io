@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { Screen } from '../../../src/term/tui/screen.ts'
-import type { Term } from '../../../src/term/terminal.ts'
+import { test } from 'vitest'
+import { Screen } from '@/term/tui/screen.ts'
+import type { Term } from '@/term/terminal.ts'
 
 /** 只实现 Screen 用到的部分，记录写出去的内容和监听器状态 */
 function fakeTerm(cols = 80, rows = 24) {

@@ -1,5 +1,5 @@
-import { inverse } from '../../render/ansi.ts'
-import { padEnd, truncateTo, visibleWidth } from '../../render/width.ts'
+import { inverse } from '@/render/ansi.ts'
+import { padEnd, truncateTo, visibleWidth } from '@/render/width.ts'
 
 export interface StatusBarOptions {
     readonly left: string

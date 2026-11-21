@@ -1,7 +1,7 @@
-import { green } from '../../render/ansi.ts'
-import { select } from '../../term/tui/components/select.ts'
-import { fail } from '../error.ts'
-import type { Command, Ctx } from '../types.ts'
+import { green } from '@/render/ansi.ts'
+import { select } from '@/term/tui/components/select.ts'
+import { fail } from '@/shell/error.ts'
+import type { Command, Ctx } from '@/shell/types.ts'
 
 /** 交互式选主题：移动即预览，Enter 记住，Esc 还原 */
 async function pick(ctx: Ctx): Promise<void> {

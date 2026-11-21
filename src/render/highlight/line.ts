@@ -6,7 +6,7 @@
  * 所以这里只能往字符之间插样式，绝不能增删字符。
  */
 
-import { cyan, green, magenta, red, yellow } from '../ansi.ts'
+import { cyan, green, magenta, red, yellow } from '@/render/ansi.ts'
 
 export interface LineClassifier {
     isCommand(name: string): boolean

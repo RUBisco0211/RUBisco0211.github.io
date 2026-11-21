@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { createAliasExpander } from '../../src/shell/alias.ts'
-import { tokenize } from '../../src/shell/tokenize.ts'
+import { test } from 'vitest'
+import { createAliasExpander } from '@/shell/alias.ts'
+import { tokenize } from '@/shell/tokenize.ts'
 
 test('tokenize 拆词并支持成对引号', () => {
     assert.deepEqual(tokenize('ls -l'), ['ls', '-l'])

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { wrapAnsi } from '../../src/render/wrap.ts'
-import { visibleWidth } from '../../src/render/width.ts'
+import { test } from 'vitest'
+import { wrapAnsi } from '@/render/wrap.ts'
+import { visibleWidth } from '@/render/width.ts'
 
 const plain = (text: string): string =>
     text.replace(/\x1b\]8;;[^\x1b]*\x1b\\/g, '').replace(/\x1b\[[0-9;]*m/g, '')

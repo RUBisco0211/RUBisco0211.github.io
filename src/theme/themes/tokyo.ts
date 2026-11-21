@@ -1,4 +1,4 @@
-import type { Theme } from '../types.ts'
+import type { Theme } from '@/theme/types.ts'
 
 /** Tokyo Night（夜）/ Tokyo Night Day（日） */
 export const tokyo: Theme = {

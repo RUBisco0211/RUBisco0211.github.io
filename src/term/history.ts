@@ -7,7 +7,7 @@
  */
 
 import { History } from 'xterm-readline/lib/history.js'
-import { readStored, takeLegacy, writeStored } from '../storage.ts'
+import { readStored, takeLegacy, writeStored } from '@/storage.ts'
 
 const NAME = 'history'
 /** 老版本 xterm-readline 用的裸 key，第一次跑时迁移过来 */

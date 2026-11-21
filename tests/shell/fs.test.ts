@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import type { DocMeta } from '../../src/content/types.ts'
-import { buildFs, lookup } from '../../src/shell/fs.ts'
+import { test } from 'vitest'
+import type { DocMeta } from '@/content/types.ts'
+import { buildFs, lookup } from '@/shell/fs.ts'
 
 const doc = (slug: string, extra: Partial<DocMeta> = {}): DocMeta => ({
     slug,

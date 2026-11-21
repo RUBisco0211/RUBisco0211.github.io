@@ -8,8 +8,8 @@ import {
     dim,
     green,
     moveTo,
-} from '../../render/ansi.ts'
-import type { Command } from '../types.ts'
+} from '@/render/ansi.ts'
+import type { Command } from '@/shell/types.ts'
 
 /** 帧间隔（毫秒），越小雨越快 */
 const FRAME_MS = 70

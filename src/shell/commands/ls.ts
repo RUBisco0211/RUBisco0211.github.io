@@ -1,10 +1,10 @@
-import { cyan, dim, green, yellow } from '../../render/ansi.ts'
-import { formatCount } from '../../content/format.ts'
-import { formatTable } from '../../render/table.ts'
-import { completePath } from '../complete.ts'
-import { fail } from '../error.ts'
-import { lookup, type FileEntry } from '../fs.ts'
-import type { Command } from '../types.ts'
+import { cyan, dim, green, yellow } from '@/render/ansi.ts'
+import { formatCount } from '@/content/format.ts'
+import { formatTable } from '@/render/table.ts'
+import { completePath } from '@/shell/complete.ts'
+import { fail } from '@/shell/error.ts'
+import { lookup, type FileEntry } from '@/shell/fs.ts'
+import type { Command } from '@/shell/types.ts'
 
 interface Row {
     kind: string

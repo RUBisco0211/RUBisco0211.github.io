@@ -11,8 +11,8 @@ import {
     underline,
     white,
     yellow,
-} from '../../render/ansi.ts'
-import type { Command } from '../types.ts'
+} from '@/render/ansi.ts'
+import type { Command } from '@/shell/types.ts'
 
 const ansi: Command = {
     name: 'ansi',

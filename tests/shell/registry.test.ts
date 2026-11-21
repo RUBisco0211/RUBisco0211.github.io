@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { createRegistry } from '../../src/shell/registry.ts'
-import type { Command } from '../../src/shell/types.ts'
+import { test } from 'vitest'
+import { createRegistry } from '@/shell/registry.ts'
+import type { Command } from '@/shell/types.ts'
 
 const cmd = (name: string): Command => ({ name, description: '', run() {} })
 

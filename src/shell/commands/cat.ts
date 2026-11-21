@@ -1,8 +1,8 @@
-import { completePath } from '../complete.ts'
-import { fail, printUsage } from '../error.ts'
-import { lookup, type FileEntry } from '../fs.ts'
-import { readDoc } from '../../utils/reader.ts'
-import type { Command, Ctx } from '../types.ts'
+import { completePath } from '@/shell/complete.ts'
+import { fail, printUsage } from '@/shell/error.ts'
+import { lookup, type FileEntry } from '@/shell/fs.ts'
+import { readDoc } from '@/utils/reader.ts'
+import type { Command, Ctx } from '@/shell/types.ts'
 
 export interface ResolvedDoc {
     readonly doc: FileEntry

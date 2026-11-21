@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { columnWidths, formatRow, formatTable, rowWidth } from '../../src/render/table.ts'
-import { stripAnsi } from '../../src/render/width.ts'
+import { test } from 'vitest'
+import { columnWidths, formatRow, formatTable, rowWidth } from '@/render/table.ts'
+import { stripAnsi } from '@/render/width.ts'
 
 test('列宽按显示宽度算，中文和颜色序列都不算多', () => {
     assert.deepEqual(

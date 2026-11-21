@@ -1,10 +1,6 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import {
-    cleanSelection,
-    locateTitles,
-    progress,
-} from '../../../../../src/term/tui/components/pager/logic.ts'
+import { test } from 'vitest'
+import { cleanSelection, locateTitles, progress } from '@/term/tui/components/pager/logic.ts'
 
 test('cleanSelection 去掉行尾空白和末尾换行', () => {
     // xterm 的 buffer 行是空格填充的，选到行尾会带一串空白

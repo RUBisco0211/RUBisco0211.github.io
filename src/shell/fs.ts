@@ -9,7 +9,7 @@
  * 所以内容想嵌套（比如 blog/2026/xxx）不需要改这里，slug 里带斜杠就行。
  */
 
-import type { DocKind, DocMeta } from '../content/types.ts'
+import type { DocKind, DocMeta } from '@/content/types.ts'
 import { normalize, resolvePath, splitPath } from './path.ts'
 
 export type { DocKind, DocMeta }

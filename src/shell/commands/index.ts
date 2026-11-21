@@ -1,4 +1,4 @@
-import type { Command } from '../types.ts'
+import type { Command } from '@/shell/types.ts'
 import ansi from './ansi.ts'
 import cat from './cat.ts'
 import cd from './cd.ts'

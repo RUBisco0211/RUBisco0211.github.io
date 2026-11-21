@@ -1,9 +1,9 @@
-import type { DocMeta } from '../../content/types.ts'
-import { dim } from '../../render/ansi.ts'
-import { select } from '../../term/tui/components/select.ts'
-import { readDoc } from '../../utils/reader.ts'
-import { fail } from '../error.ts'
-import type { Command, Ctx } from '../types.ts'
+import type { DocMeta } from '@/content/types.ts'
+import { dim } from '@/render/ansi.ts'
+import { select } from '@/term/tui/components/select.ts'
+import { readDoc } from '@/utils/reader.ts'
+import { fail } from '@/shell/error.ts'
+import type { Command, Ctx } from '@/shell/types.ts'
 
 interface TagBucket {
     readonly tag: string

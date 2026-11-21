@@ -1,9 +1,9 @@
-import type { DocMeta } from '../../content/types.ts'
-import { blue, bold, dim, hyperlink } from '../../render/ansi.ts'
-import { formatChars } from '../../content/format.ts'
-import { columnWidths, formatTable, rowWidth } from '../../render/table.ts'
-import { padEnd, visibleWidth } from '../../render/width.ts'
-import type { Command } from '../types.ts'
+import type { DocMeta } from '@/content/types.ts'
+import { blue, bold, dim, hyperlink } from '@/render/ansi.ts'
+import { formatChars } from '@/content/format.ts'
+import { columnWidths, formatTable, rowWidth } from '@/render/table.ts'
+import { padEnd, visibleWidth } from '@/render/width.ts'
+import type { Command } from '@/shell/types.ts'
 
 export type InfoLine =
     | { readonly kind: 'title'; readonly value: string }

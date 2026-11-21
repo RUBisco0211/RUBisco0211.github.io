@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { statusBar } from '../../../src/term/tui/status.ts'
-import { visibleWidth } from '../../../src/render/width.ts'
-import { MIN_COLS } from '../../../src/term/size.ts'
+import { test } from 'vitest'
+import { statusBar } from '@/term/tui/status.ts'
+import { visibleWidth } from '@/render/width.ts'
+import { MIN_COLS } from '@/term/size.ts'
 
 const plain = (text: string): string => text.replace(/\x1b\[[0-9;]*m/g, '')
 

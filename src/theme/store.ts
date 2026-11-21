@@ -1,5 +1,5 @@
-import type { Term } from '../term/terminal.ts'
-import { readStored, writeStored } from '../storage.ts'
+import type { Term } from '@/term/terminal.ts'
+import { readStored, writeStored } from '@/storage.ts'
 import { findTheme, themes } from './index.ts'
 
 const NAME = 'theme'

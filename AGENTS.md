@@ -39,7 +39,7 @@ plugins/site-content.ts   content/ → virtual:site-tree
 scripts/
   build-content.ts   内容编译器（被 dev 插件和 copy-content 共用）
   copy-content.ts    构建后把 .md 拷进 dist/content/
-tests/                node --test，和 src 分开存放
+tests/                vitest，和 src 分开存放
 ```
 
 ## 核心契约
@@ -126,8 +126,7 @@ export function completePath(ctx: Ctx, current: string): Completion[]
 `src/shell/commands/index.ts` 显式 import 每条命令并拼成 `commands` 数组。
 新增命令 = 新建 `commands/<name>.ts` + 在 `index.ts` 里加一行 import 和一个数组项。
 
-不用 `import.meta.glob` 自动收集：那是 Vite 专属 API，`node --test` 里 import
-这个入口会直接报错；显式列表还能让 tsc 立刻发现漏接。
+不用 `import.meta.glob` 自动收集：显式列表能让 tsc 立刻发现漏接，顺序也完全可控。
 
 ### 4. alias 是单层纯 token 替换
 
@@ -175,14 +174,20 @@ aliases: {
 
 ```bash
 npm run dev           # vite，改 content/ 会整页 reload
-npm test              # node --test，直接跑 TS（Node 原生类型剥离）
+npm test              # vitest run
 npm run typecheck     # tsc --noEmit
 npm run build         # tsc + vite build + copy-content
 npm run format        # prettier
 ```
 
-测试用 `node --test` 而非 vitest/tsx：Node 26 原生支持类型剥离，零依赖。
-因此**所有相对 import 必须带 `.ts` 扩展名**（tsconfig 开了 `allowImportingTsExtensions`）。
+测试用 **Vitest**：和 Vite 共享配置、插件与 `@/` 别名。
+
+跨目录 import 一律用 `@/...`（如 `@/render/ansi.ts`），不再写 `../../`；同目录仍用 `./`。
+别名键是 `@/` 而不是裸 `@`——否则 `@xterm/xterm` 这类 scoped 包会被前缀匹配掉。
+Vite/Vitest 走 `vite.config.ts` 的 `resolve.alias`，tsc 不认它，所以 `tsconfig.json`
+另配一份 `paths`（两份配置是 Vite+TS 的标准做法）。
+
+相对 import 带 `.ts` 扩展名（tsconfig 开了 `allowImportingTsExtensions`）。
 
 ## 最容易踩的坑（全文见 `docs/pitfalls.md`）
 

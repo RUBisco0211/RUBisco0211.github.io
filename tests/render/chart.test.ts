@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { bar } from '../../src/render/chart.ts'
+import { test } from 'vitest'
+import { bar } from '@/render/chart.ts'
 
 test('零或负值不出格子', () => {
     assert.equal(bar(0, 10, 5), '')

@@ -4,7 +4,7 @@ import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Readline } from 'xterm-readline'
 import type { History } from 'xterm-readline/lib/history.js'
-import { dim, red } from '../render/ansi.ts'
+import { dim, red } from '@/render/ansi.ts'
 import { SiteHistory } from './history.ts'
 import '@xterm/xterm/css/xterm.css'
 

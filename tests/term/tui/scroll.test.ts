@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { Scroll, clampOffset } from '../../../src/term/tui/scroll.ts'
+import { test } from 'vitest'
+import { Scroll, clampOffset } from '@/term/tui/scroll.ts'
 
 test('clampOffset 夹在 [0, total - height]', () => {
     assert.equal(clampOffset(-5, 100, 10), 0)

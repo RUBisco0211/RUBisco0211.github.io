@@ -1,9 +1,9 @@
-import { cyan } from '../../render/ansi.ts'
-import { completePath } from '../complete.ts'
-import { fail } from '../error.ts'
-import { getNode, lookup, type Fs } from '../fs.ts'
-import { displayPath, normalize } from '../path.ts'
-import type { Command } from '../types.ts'
+import { cyan } from '@/render/ansi.ts'
+import { completePath } from '@/shell/complete.ts'
+import { fail } from '@/shell/error.ts'
+import { getNode, lookup, type Fs } from '@/shell/fs.ts'
+import { displayPath, normalize } from '@/shell/path.ts'
+import type { Command } from '@/shell/types.ts'
 
 /**
  * 把虚拟文件系统画成树。

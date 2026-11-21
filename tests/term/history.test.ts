@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { afterEach, beforeEach, test } from 'node:test'
-import { SiteHistory } from '../../src/term/history.ts'
+import { afterEach, beforeEach, test } from 'vitest'
+import { SiteHistory } from '@/term/history.ts'
 import { installFakeStorage } from '../helpers/fakeStorage.ts'
 
 let storage: Storage

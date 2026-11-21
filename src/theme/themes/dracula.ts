@@ -1,4 +1,4 @@
-import type { Theme } from '../types.ts'
+import type { Theme } from '@/theme/types.ts'
 
 /** Dracula（夜）/ Alucard（日） */
 export const dracula: Theme = {

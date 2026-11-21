@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { MIN_COLS, MIN_ROWS, sizeHint, tooSmall } from '../../src/term/size.ts'
+import { test } from 'vitest'
+import { MIN_COLS, MIN_ROWS, sizeHint, tooSmall } from '@/term/size.ts'
 
 test('正好到门槛不算小', () => {
     assert.equal(tooSmall(MIN_COLS, MIN_ROWS), false)

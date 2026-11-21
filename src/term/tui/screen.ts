@@ -1,12 +1,6 @@
-import {
-    ALT_SCREEN_OFF,
-    ALT_SCREEN_ON,
-    CLEAR_SCREEN,
-    ERASE_LINE,
-    moveTo,
-} from '../../render/ansi.ts'
-import { truncateTo } from '../../render/width.ts'
-import type { Term } from '../terminal.ts'
+import { ALT_SCREEN_OFF, ALT_SCREEN_ON, CLEAR_SCREEN, ERASE_LINE, moveTo } from '@/render/ansi.ts'
+import { truncateTo } from '@/render/width.ts'
+import type { Term } from '@/term/terminal.ts'
 import { ListCursor } from './list.ts'
 import { Scroll } from './scroll.ts'
 import { statusBar, type StatusBarOptions } from './status.ts'

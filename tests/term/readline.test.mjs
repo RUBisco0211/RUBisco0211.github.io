@@ -14,7 +14,7 @@ globalThis.window = {
 
 const { default: headless } = await import('@xterm/headless')
 const { Readline } = await import('xterm-readline')
-const { test } = await import('node:test')
+const { test } = await import('vitest')
 const assert = (await import('node:assert/strict')).default
 
 const { Terminal } = headless
@@ -173,7 +173,7 @@ test('高亮不会打乱屏幕内容和光标', async () => {
     }
     const { default: headless } = await import('@xterm/headless')
     const { Readline } = await import('xterm-readline')
-    const { highlightLine } = await import('../../src/render/highlight/line.ts')
+    const { highlightLine } = await import('@/render/highlight/line.ts')
 
     const term = new headless.Terminal({ cols: 40, rows: 10, allowProposedApi: true })
     term.attachCustomKeyEventHandler = () => {}

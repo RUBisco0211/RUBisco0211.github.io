@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { keyChord, lookupKey, resolveKeys } from '../../src/term/keys.ts'
+import { test } from 'vitest'
+import { keyChord, lookupKey, resolveKeys } from '@/term/keys.ts'
 
 /** 造一个只带必要字段的键盘事件 */
 function press(key: string, mods: Partial<KeyboardEvent> = {}): KeyboardEvent {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { afterEach, test } from 'node:test'
-import { createContentStore } from '../../src/content/store.ts'
-import type { DocMeta } from '../../src/content/types.ts'
+import { afterEach, test } from 'vitest'
+import { createContentStore } from '@/content/store.ts'
+import type { DocMeta } from '@/content/types.ts'
 
 const doc = (slug: string, path: string): DocMeta => ({
     slug,

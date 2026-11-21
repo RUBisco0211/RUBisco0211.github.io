@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { barRows, type BarRow } from '../../src/render/barRows.ts'
-import { visibleWidth } from '../../src/render/width.ts'
-import { MIN_COLS } from '../../src/term/size.ts'
+import { test } from 'vitest'
+import { barRows, type BarRow } from '@/render/barRows.ts'
+import { visibleWidth } from '@/render/width.ts'
+import { MIN_COLS } from '@/term/size.ts'
 
 const strip = (text: string): string => text.replace(/\x1b\[[0-9;]*m/g, '')
 const paint = (text: string): string => text

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { searchDocs } from '../../src/content/search.ts'
-import type { ContentStore } from '../../src/content/store.ts'
-import type { DocMeta } from '../../src/content/types.ts'
+import { test } from 'vitest'
+import { searchDocs } from '@/content/search.ts'
+import type { ContentStore } from '@/content/store.ts'
+import type { DocMeta } from '@/content/types.ts'
 
 const doc = (slug: string, extra: Partial<DocMeta> = {}): DocMeta => ({
     slug,

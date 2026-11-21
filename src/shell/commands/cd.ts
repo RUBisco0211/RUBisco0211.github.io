@@ -1,6 +1,6 @@
-import { completePath } from '../complete.ts'
-import { fail } from '../error.ts'
-import type { Command } from '../types.ts'
+import { completePath } from '@/shell/complete.ts'
+import { fail } from '@/shell/error.ts'
+import type { Command } from '@/shell/types.ts'
 
 const cd: Command = {
     name: 'cd',

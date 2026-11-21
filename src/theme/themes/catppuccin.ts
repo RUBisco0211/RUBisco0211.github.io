@@ -1,4 +1,4 @@
-import type { Theme } from '../types.ts'
+import type { Theme } from '@/theme/types.ts'
 
 /** Catppuccin Mocha（夜）/ Latte（日） */
 export const catppuccin: Theme = {

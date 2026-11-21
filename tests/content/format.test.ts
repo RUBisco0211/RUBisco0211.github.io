@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { formatChars, formatCount } from '../../src/content/format.ts'
+import { test } from 'vitest'
+import { formatChars, formatCount } from '@/content/format.ts'
 
 test('formatCount 小于一千原样显示', () => {
     assert.equal(formatCount(1), '1')

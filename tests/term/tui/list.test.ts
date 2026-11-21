@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { ListCursor } from '../../../src/term/tui/list.ts'
+import { test } from 'vitest'
+import { ListCursor } from '@/term/tui/list.ts'
 
 test('move 夹在 [0, total-1]', () => {
     const list = new ListCursor({ total: 10, visible: 5 })

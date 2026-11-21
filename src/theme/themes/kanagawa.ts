@@ -1,4 +1,4 @@
-import type { Theme } from '../types.ts'
+import type { Theme } from '@/theme/types.ts'
 
 /** Kanagawa Wave（夜）/ Lotus（日） */
 export const kanagawa: Theme = {
