@@ -18,18 +18,34 @@
 
 ## TUI 组件：pager 和 select
 
-两者共用 `term/tui/screen.ts` 的 `enterFullscreen()`：切 alternate screen、`Term.captureKeys()`
-接管键盘、`onResize` 防抖重排、退出时清理（归还键盘 + 摘 resize + 退出 alt screen）。
-绘制和状态机各自保留——pager 有多模式，select 有筛选，硬套同一绘制抽象会泄漏。
+两者都用 `term/tui/screen.ts` 的 `Screen` 对象。一个组件只跟它打交道：
 
-- `term/tui/pager/` 整屏阅读器：`index.ts` 是交互循环（搜索 `/` 后 `n`/`N`、目录跳转 `t`、滚轮、翻页），
-  `logic.ts` 是纯逻辑（滚动换算、标题定位、状态栏、选区清理），不碰 `Term`，直接在 node 里测
-- `term/tui/select.ts` 通用单选列表：`theme`、`history`、`tags`、`search` 用，支持 `filterable` 的输入筛选
-- `term/tui/window.ts`：`clampWindow`，pager 目录模式和 select 共用
+- **生命周期**：构造时切 alternate screen、`Term.captureKeys()` 接管键盘、监听 resize；`close()` 一次性归还
+- **画布**：`put(row, text)` / `clear(row)` / `status({ left, right, hints })` 攒一帧，`flush()` 写出去
+- **状态**：`input`（单行输入）、`list`（列表光标）、`scroll`（滚动视口）
+
+```ts
+const screen = new Screen(term, { onKey, onWheel, onResize })
+screen.list.setTotal(items.length)
+screen.put(0, title)
+screen.status({ left: title, right: '10%', hints })
+screen.flush()
+screen.close()
+```
+
+绘制循环和模式状态机仍由组件自己持有——pager 有多模式，select 有筛选，硬套同一个绘制抽象会泄漏。
+
+| 文件                     | 职责                                                                               |
+| ------------------------ | ---------------------------------------------------------------------------------- |
+| `term/tui/screen.ts`     | `Screen`：生命周期 + 画布 + `input`/`list`/`scroll`                                |
+| `term/tui/list.ts`       | `ListCursor`：选中索引 + 可视窗口                                                  |
+| `term/tui/scroll.ts`     | `Scroll`：offset / 翻页 / 滚轮累积                                                 |
+| `term/tui/text-input.ts` | `TextInput`：Backspace + 可打印字符                                                |
+| `term/tui/status.ts`     | `statusBar()`：整行反显，放不下从头部丢提示                                        |
+| `term/tui/pager/`        | 整屏阅读器：`index.ts` 交互循环，`logic.ts` 纯逻辑（标题定位、进度文本、选区清理） |
+| `term/tui/select.ts`     | 通用单选列表：`theme`、`history`、`tags`、`search` 用                              |
 
 命令里 `await` 它们，所以占用期间 shell 不会去调 `term.read()`——两者天然互斥，shell 不用改。
-
-`pagerStatus()` 的操作提示按**重要性从低到高**排列，放不下时从头部丢，`q 退出` 留到最后。
 
 ## 命令行着色
 

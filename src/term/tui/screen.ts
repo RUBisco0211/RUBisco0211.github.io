@@ -1,46 +1,104 @@
-import { ALT_SCREEN_OFF, ALT_SCREEN_ON, CLEAR_SCREEN } from '../../render/ansi.ts'
+import {
+    ALT_SCREEN_OFF,
+    ALT_SCREEN_ON,
+    CLEAR_SCREEN,
+    ERASE_LINE,
+    moveTo,
+} from '../../render/ansi.ts'
+import { truncateTo } from '../../render/width.ts'
 import type { Term } from '../terminal.ts'
+import { ListCursor } from './list.ts'
+import { Scroll } from './scroll.ts'
+import { statusBar, type StatusBarOptions } from './status.ts'
+import { TextInput } from './text-input.ts'
 
-export interface FullscreenOptions {
+export interface ScreenOptions {
     readonly onKey: (event: KeyboardEvent) => void
     readonly onWheel?: (deltaY: number, deltaMode: number) => void
-    /** 尺寸变化后的重排回调；不给就不监听 resize */
-    readonly onResize?: () => void
+    readonly onResize?: (screen: Screen) => void
     /** resize 防抖毫秒，默认 80 */
     readonly resizeDebounce?: number
 }
 
-export interface Fullscreen {
-    /** 归还键盘、摘 resize、退出 alternate screen。幂等调用一次即可。 */
-    close(): void
-}
-
 /**
- * 整屏 TUI 的公共生命周期：切 alternate screen、接管键盘、监听尺寸、退出时清理。
+ * 整屏 TUI 的状态容器。
  *
- * 只负责「进/出和清理」，绘制和状态机留给调用方——pager 有多模式，select 有筛选，
+ * 一个组件只跟它打交道：
+ * - 生命周期：构造时切 alternate screen、接管键盘、监听 resize；`close()` 一次性还原
+ * - 画布：`put` / `clear` / `status` 攒一帧，`flush` 写出去
+ * - 状态：`input`（单行输入）、`list`（列表光标）、`scroll`（滚动视口）
+ *
+ * 绘制循环和模式状态机仍由组件自己持有——pager 有多模式，select 有筛选，
  * 硬套同一个绘制抽象会立刻泄漏。
  */
-export function enterFullscreen(term: Term, options: FullscreenOptions): Fullscreen {
-    term.write(`${ALT_SCREEN_ON}${CLEAR_SCREEN}`)
+export class Screen {
+    readonly term: Term
+    readonly input = new TextInput()
+    readonly list: ListCursor
+    readonly scroll: Scroll
 
-    const releaseKeys = term.captureKeys(options.onKey, options.onWheel)
+    private parts: string[] = []
+    private readonly releaseKeys: () => void
+    private readonly releaseResize: () => void
+    private timer: ReturnType<typeof setTimeout> | undefined
 
-    const onResize = options.onResize
-    let timer: ReturnType<typeof setTimeout> | undefined
-    const releaseResize = onResize
-        ? term.onResize(() => {
-              clearTimeout(timer)
-              timer = setTimeout(onResize, options.resizeDebounce ?? 80)
-          })
-        : () => {}
+    constructor(term: Term, options: ScreenOptions) {
+        this.term = term
+        this.list = new ListCursor({ total: 0, visible: Math.max(1, term.rows - 1) })
+        this.scroll = new Scroll({ height: Math.max(1, term.rows - 1) })
 
-    return {
-        close() {
-            clearTimeout(timer)
-            releaseResize()
-            releaseKeys()
-            term.write(ALT_SCREEN_OFF)
-        },
+        term.write(`${ALT_SCREEN_ON}${CLEAR_SCREEN}`)
+        this.releaseKeys = term.captureKeys(options.onKey, options.onWheel)
+
+        const onResize = options.onResize
+        this.releaseResize = onResize
+            ? term.onResize(() => {
+                  clearTimeout(this.timer)
+                  this.timer = setTimeout(() => onResize(this), options.resizeDebounce ?? 80)
+              })
+            : () => {}
+    }
+
+    get cols(): number {
+        return this.term.cols
+    }
+
+    get rows(): number {
+        return this.term.rows
+    }
+
+    /** 攒一行（0-based）：自动 ERASE_LINE + 截断到 cols */
+    put(row: number, text: string): void {
+        this.parts.push(`${moveTo(row + 1)}${ERASE_LINE}${truncateTo(text, this.cols)}`)
+    }
+
+    /** 清一行 */
+    clear(row: number): void {
+        this.parts.push(`${moveTo(row + 1)}${ERASE_LINE}`)
+    }
+
+    /** 画最后一行状态栏 */
+    status(options: Omit<StatusBarOptions, 'cols'>): void {
+        this.put(this.rows - 1, statusBar({ ...options, cols: this.cols }))
+    }
+
+    /** 裸写（临时提示、动画这类绕开攒帧的） */
+    write(text: string): void {
+        this.term.write(text)
+    }
+
+    /** 把攒的行一次性写出去 */
+    flush(): void {
+        if (this.parts.length === 0) return
+        this.term.write(this.parts.join(''))
+        this.parts = []
+    }
+
+    /** 归还键盘、摘 resize、退出 alternate screen */
+    close(): void {
+        clearTimeout(this.timer)
+        this.releaseResize()
+        this.releaseKeys()
+        this.term.write(ALT_SCREEN_OFF)
     }
 }

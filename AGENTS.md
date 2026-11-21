@@ -28,7 +28,7 @@ src/
   storage.ts          localStorage 唯一入口（统一前缀）
   render/             ANSI 原语、显示宽度、折行、语法着色、markdown→ANSI、列对齐
   term/               xterm 封装、整屏 TUI、命令历史
-    tui/              screen.ts 公共生命周期 + pager/ + select.ts + window.ts
+    tui/              screen.ts（Screen 状态容器）+ pager/ + select.ts + list/scroll/status/text-input
   shell/              tokenize / alias / registry / fs / path / complete / error
     commands/         一条命令一个文件 + 手动在 index.ts 注册
   utils/              跨层工具（reader.ts：把一篇文档丢进 pager）
@@ -158,14 +158,15 @@ aliases: {
 
 字符网格在窄窗口里排不下（状态栏溢出、柱状图折行、表格对不齐）。所以不做逐组件降级，
 而是统一门槛 `term/size.ts`：低于 `MIN_COLS`/`MIN_ROWS` 时 `main.ts` 盖上 `#size-mask`
-并 `Term.enableInput(false)`，尺寸回来自动恢复。`pagerStatus`/`barRows` 只保证 ≥ 门槛时不溢出。
+并 `Term.enableInput(false)`，尺寸回来自动恢复。`statusBar`/`barRows` 只保证 ≥ 门槛时不溢出。
 
 ### 8. TUI / 着色 / 列对齐
 
 细节见 `docs/architecture.md`。三条硬约束先记住：
 
-- **pager/select**：`term/tui/screen.ts` 统一进场/出场（alternate screen + `Term.captureKeys()`
-  - `onResize` 整屏重排）。命令里 `await` 它们，占用期间 shell 不会调 `term.read()`。
+- **pager/select**：一个 `Screen` 对象统一管生命周期（alternate screen + `Term.captureKeys()`
+  - `onResize` 整屏重排）、画布（`put`/`clear`/`status`/`flush`）和状态（`input`/`list`/`scroll`）。
+    命令里 `await` 它们，占用期间 shell 不会调 `term.read()`。
 - **命令行着色**：`highlightLine()` 只能往字符之间插样式，**绝不能增删字符**（去色后必须和原行逐字符一致）。
 - **列对齐**：一律走 `render/table.ts`；单元格可带 ANSI/OSC 8，宽度按 `visibleWidth` 算，不做截断。
 
