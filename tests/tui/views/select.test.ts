@@ -113,7 +113,8 @@ test('滚轮一格移动选中项，并回调 onHighlight', () => {
 test('滚轮按像素累积，不足一行不动', () => {
     const seen: number[] = []
     const view = makeView((_item, index) => seen.push(index))
-    // 小 delta 累积：40px + 40px 攒够一行
+    // 小 delta 累积：80px 还不到一行，再补 40px 才到 120px
+    view.wheel(40, 0)
     view.wheel(40, 0)
     assert.deepEqual(seen, [0])
     view.wheel(40, 0)

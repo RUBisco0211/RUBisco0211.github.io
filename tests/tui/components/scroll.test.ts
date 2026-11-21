@@ -31,21 +31,28 @@ test('page / half / top / bottom', () => {
     assert.equal(scroll.offset, 0)
 })
 
-test('滚轮攒够一行才滚', () => {
-    // 触控板 10 个 8px 的小事件 = 80px，正好滚一行
-    const trackpad = new Scroll({ total: 100, height: 10, pixelsPerLine: 80 })
+test('触控板的小 delta 累积，攒够一行才滚', () => {
+    const trackpad = new Scroll({ total: 100, height: 10 })
     let moved = false
-    for (let i = 0; i < 10; i += 1) moved = trackpad.wheel(8) || moved
-    assert.equal(moved, true)
-    assert.equal(trackpad.offset, 1)
+    // 90px 还不够一行
+    for (let i = 0; i < 9; i += 1) moved = trackpad.wheel(10) || moved
+    assert.equal(moved, false)
+    assert.equal(trackpad.offset, 0)
 
-    // 鼠标一格 100px → 1.25 行：前三次各滚 1 行，第四次攒到 2 行
-    const mouse = new Scroll({ total: 100, height: 10, pixelsPerLine: 80 })
-    assert.equal(mouse.wheel(100), true)
-    assert.equal(mouse.wheel(100), true)
-    assert.equal(mouse.wheel(100), true)
-    assert.equal(mouse.wheel(100), true)
-    assert.equal(mouse.offset, 5)
+    assert.equal(trackpad.wheel(10), true)
+    assert.equal(trackpad.offset, 1)
+})
+
+test('鼠标一格固定一行，不会某格蹦出两行', () => {
+    // Chrome 一格 100px、有些浏览器 120px，都应该是 1 行
+    const mouse = new Scroll({ total: 100, height: 10 })
+    for (let i = 0; i < 20; i += 1) assert.equal(mouse.wheel(100), true)
+    assert.equal(mouse.offset, 20)
+
+    const other = new Scroll({ total: 100, height: 10 })
+    assert.equal(other.wheel(120), true)
+    assert.equal(other.wheel(120), true)
+    assert.equal(other.offset, 2)
 })
 
 test('滚轮 deltaMode 1（行）和 2（页）直接换算', () => {

@@ -1,5 +1,10 @@
-/** 多少像素算一行。鼠标滚轮一格约 100px，所以一格 ≈ 1.25 行 */
-const PIXELS_PER_LINE = 80
+/** 多少像素算一行。鼠标滚轮一格约 100px，正好一行 */
+const PIXELS_PER_LINE = 100
+/**
+ * 小于这个量认为是触控板的连续小 delta（需要累积）；
+ * 大于等于它就是鼠标的离散一格（一次结算，不跨事件留小数）。
+ */
+const NOTCH_MIN = 50
 
 /** 把 offset 夹在 [0, total - height]。内容比一屏还短时固定在顶部。 */
 export function clampOffset(offset: number, total: number, height: number): number {
@@ -31,11 +36,20 @@ export class WheelLines {
 
     /** 喂一次滚轮，返回应移动的整行数（0 表示还不足一行） */
     take(deltaY: number, deltaMode = 0): number {
-        this.pixels +=
-            deltaMode === 0
-                ? deltaY
-                : wheelLines(deltaY, deltaMode, this.pixelsPerLine) * this.pixelsPerLine
+        if (deltaY === 0) return 0
 
+        // 行 / 页模式本身就带单位，直接换算成整行
+        if (deltaMode !== 0) return Math.round(wheelLines(deltaY, deltaMode, this.pixelsPerLine))
+
+        // 鼠标一格是离散的大 delta：一次事件结算掉，不跨事件留小数，
+        // 否则「一格 100px」和「一行 100px」的误差会攒出「有时走两行」
+        if (Math.abs(deltaY) >= NOTCH_MIN) {
+            const lines = Math.round(deltaY / this.pixelsPerLine)
+            return lines === 0 ? Math.sign(deltaY) : lines
+        }
+
+        // 触控板：小步长必须累积，攒够一行才动
+        this.pixels += deltaY
         const whole = Math.trunc(this.pixels / this.pixelsPerLine)
         if (whole === 0) return 0
 
