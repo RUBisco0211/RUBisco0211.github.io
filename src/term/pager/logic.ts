@@ -18,7 +18,10 @@ const PIXELS_PER_LINE = 80
  * 末尾还会剩几个换行。段落之间的空行要保留，所以只去行尾空白和末尾换行。
  */
 export function cleanSelection(text: string): string {
-    return text.replace(/[ \t]+$/gm, '').replace(/\n+$/, '')
+    return text
+        .replace(/\r\n?/g, '\n')
+        .replace(/[ \t]+$/gm, '')
+        .replace(/\n+$/, '')
 }
 
 export function clampOffset(offset: number, total: number, height: number): number {

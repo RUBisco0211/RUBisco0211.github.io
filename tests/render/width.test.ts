@@ -48,10 +48,34 @@ test('padEnd 不会截断超长内容', () => {
     assert.equal(padEnd('abcdef', 3), 'abcdef')
 })
 
+test('emoji 按 2 列算', () => {
+    assert.equal(visibleWidth('😀'), 2)
+    assert.equal(visibleWidth('a😀b'), 4)
+})
+
+test('组合字符 / 零宽字符不占列', () => {
+    // 组合用声调符号接在 e 后面，终端只显示一个字符
+    assert.equal(visibleWidth('e\u0301'), 1)
+    assert.equal(visibleWidth('\u200b'), 0)
+})
+
+test('tab 没有列位置信息，按 1 列近似（已知限制）', () => {
+    // 真实的 tab 要展开到下一个 tab stop，宽度取决于当前列，visibleWidth 拿不到
+    // 这个信息。内容里不写 tab，所以不展开，钉住现状。
+    assert.equal(visibleWidth('\t'), 1)
+    assert.equal(visibleWidth('a\tb'), 3)
+})
+
 test('truncateTo 按显示宽度截断并补省略号', () => {
     assert.equal(truncateTo('abcdef', 10), 'abcdef')
     assert.equal(truncateTo('abcdef', 4), 'abc…')
     // 中文占 2 列，只能放 1 个字 + 省略号
     assert.equal(truncateTo('中文中文', 4), '中…')
     assert.equal(truncateTo('abc', 0), '')
+})
+
+test('truncateTo 不会切出超过宽度的宽字符', () => {
+    assert.equal(truncateTo('😀', 1), '…')
+    assert.equal(truncateTo('中文', 3), '中…')
+    assert.equal(truncateTo('中', 1), '…')
 })

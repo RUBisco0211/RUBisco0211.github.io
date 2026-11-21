@@ -8,6 +8,7 @@ import {
     pagerStatus,
 } from '../../../src/term/pager/logic.ts'
 import { visibleWidth } from '../../../src/render/width.ts'
+import { MIN_COLS, MIN_ROWS } from '../../../src/term/size.ts'
 
 const plain = (text: string): string => text.replace(/\x1b\[[0-9;]*m/g, '')
 
@@ -146,4 +147,24 @@ test('cleanSelection 去掉行尾空白和末尾换行', () => {
     assert.equal(cleanSelection('a\n\nb'), 'a\n\nb')
     // 选中纯空白时得到空串，调用方据此跳过复制
     assert.equal(cleanSelection('   \n\n'), '')
+})
+
+test('cleanSelection 不留 CRLF 的 \\r', () => {
+    assert.equal(cleanSelection('foo\r\nbar\r\n'), 'foo\nbar')
+    assert.equal(cleanSelection('foo \r\nbar\t\r\n'), 'foo\nbar')
+})
+
+test('从最小可用列宽起，状态栏任何宽度都不溢出', () => {
+    const hints = ['j/k 行', '空格 翻页', 't 目录', '/ 搜索', 'y 复制', 'q 退出']
+    for (let cols = MIN_COLS; cols <= 200; cols += 1) {
+        const status = pagerStatus({
+            title: '一篇很长很长的文章标题用来测试状态栏溢出',
+            offset: 0,
+            total: 1000,
+            height: Math.max(1, MIN_ROWS - 1),
+            cols,
+            hints,
+        })
+        assert.ok(visibleWidth(status) <= cols, `cols=${cols} 时状态栏 ${visibleWidth(status)} 列`)
+    }
 })
