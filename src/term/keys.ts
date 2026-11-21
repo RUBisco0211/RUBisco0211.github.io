@@ -8,6 +8,8 @@
  */
 export type Keymap<A extends string> = Readonly<Record<A, readonly string[]>>
 
+export type KeyHandler = (event: KeyboardEvent) => void
+
 /**
  * 合并默认键位和调用方覆盖。
  *

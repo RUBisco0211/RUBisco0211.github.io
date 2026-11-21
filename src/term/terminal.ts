@@ -4,7 +4,17 @@ import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Readline } from 'xterm-readline'
 import type { History } from 'xterm-readline/lib/history.js'
-import { dim, red } from '@/render/ansi.ts'
+import {
+    ALT_SCREEN_OFF,
+    ALT_SCREEN_ON,
+    CLEAR_SCREEN,
+    ERASE_LINE,
+    dim,
+    moveTo,
+    red,
+} from '@/render/ansi.ts'
+import { truncateTo } from '@/render/width.ts'
+import type { InputHandlers, TuiDriver } from './driver.ts'
 import { SiteHistory } from './history.ts'
 import '@xterm/xterm/css/xterm.css'
 
@@ -32,7 +42,7 @@ interface ReadlineInternals {
  * 行编辑器由 xterm-readline 提供（回显、光标移动、多行、CJK 宽度、历史）。
  * Tab 补全它没有，所以在宿主元素上捕获 keydown 自己接。
  */
-export class Term {
+export class Term implements TuiDriver {
     readonly xterm: Terminal
     private readonly readline: Readline
 
@@ -305,35 +315,48 @@ export class Term {
         )
     }
 
+    /** 进 alternate screen 并清屏 */
+    enterAltScreen(): void {
+        this.write(`${ALT_SCREEN_ON}${CLEAR_SCREEN}`)
+    }
+
+    /** 退 alternate screen */
+    exitAltScreen(): void {
+        this.write(ALT_SCREEN_OFF)
+    }
+
+    /** 整行重写：定位 + 擦除 + 截断到 cols + 写入（0-based） */
+    drawRow(row: number, text: string): void {
+        this.write(`${moveTo(row + 1)}${ERASE_LINE}${truncateTo(text, this.cols)}`)
+    }
+
     /**
-     * 接管键盘，交给 TUI 自己处理。
+     * 接管输入（键盘 + 滚轮），交给 TUI 自己处理。
      *
      * 捕获阶段拦下来，xterm 就不会把按键变成 onData，readline 也就收不到。
-     * 返回的函数用来归还键盘。
+     * 键盘和滚轮共用一个排他锁；返回的函数一次性归还两者。
      */
-    captureKeys(
-        handler: (event: KeyboardEvent) => void,
-        onWheel?: (deltaY: number, deltaMode: number) => void,
-    ): () => void {
+    captureInput(handlers: InputHandlers): () => void {
+        if (this.capturing) throw new Error('输入已被其他会话接管')
         this.capturing = true
 
         const onKey = (event: KeyboardEvent): void => {
             event.preventDefault()
             event.stopPropagation()
             if (this.inputBlocked) return
-            handler(event)
+            handlers.onKey(event)
         }
 
         const onWheelEvent = (event: WheelEvent): void => {
             event.preventDefault()
             event.stopPropagation()
             if (this.inputBlocked) return
-            onWheel?.(event.deltaY, event.deltaMode)
+            handlers.onWheel?.(event.deltaY, event.deltaMode)
         }
 
         this.host.addEventListener('keydown', onKey, true)
         // 不开 xterm 的鼠标追踪（那会劫持文本选中），直接拦 DOM 的 wheel
-        if (onWheel)
+        if (handlers.onWheel)
             this.host.addEventListener('wheel', onWheelEvent, { capture: true, passive: false })
 
         return () => {
