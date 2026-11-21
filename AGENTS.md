@@ -27,12 +27,16 @@ src/
   config.ts           站点配置：user/host/字体/主题/alias
   storage.ts          localStorage 唯一入口（统一前缀）
   render/             ANSI 原语、显示宽度、折行、语法着色、markdown→ANSI、列对齐
-  term/               xterm 封装、整屏 TUI、命令历史
-    tui/              screen.ts（Screen 状态容器）+ list/scroll/status/text-input
-      components/     pager/ + select.ts
+  term/               xterm 封装（Term，实现 TuiDriver）+ driver.ts（给 tui 的窄接口）+ 命令历史
+  tui/                整屏 TUI 子系统（只依赖 term + render）
+    canvas.ts         Canvas：纯画布
+    session.ts        TuiSession：视图栈 + 会话生命周期
+    view.ts           TuiView 接口
+    components/       list / scroll / status / text-input
+    views/            select.ts + pager.ts + matrix.ts
   shell/              tokenize / alias / registry / fs / path / complete / error
     commands/         一条命令一个文件 + 手动在 index.ts 注册
-  utils/              跨层工具（reader.ts：把一篇文档丢进 pager）
+      utils/          命令间共享的辅助件（pager-input.ts：文档 → PagerInput；outline.ts：目录）
   content/            内容树视图、字数格式化、搜索
   theme/              themes/<名字>.ts（每套含 light/dark 两个变体）+ 聚合 + store
 plugins/site-content.ts   content/ → virtual:site-tree
@@ -92,10 +96,10 @@ interface Ctx {
 
 命令用到的东西按「有没有状态」分成两类，**不要合并成一条通道**：
 
-| 性质                                 | 例子                                                                                       | 怎么拿                |
-| ------------------------------------ | ------------------------------------------------------------------------------------------ | --------------------- |
-| **纯函数**（无状态、无 I/O、确定性） | `path.*`、`fs.buildFs/lookup/getNode`、`complete.*`、`fail/printUsage`                     | 直接 `import`         |
-| **有状态 / 生命周期**                | `term`、`theme`、`content`、`cwd`、`chdir`、`run`、`prefill`、`readDoc`、`select`、`pager` | 走 `ctx` 或显式传服务 |
+| 性质                                 | 例子                                                                               | 怎么拿                |
+| ------------------------------------ | ---------------------------------------------------------------------------------- | --------------------- |
+| **纯函数**（无状态、无 I/O、确定性） | `path.*`、`fs.buildFs/lookup/getNode`、`complete.*`、`fail/printUsage`             | 直接 `import`         |
+| **有状态 / 生命周期**                | `term`、`theme`、`content`、`cwd`、`chdir`、`run`、`prefill`、`runPager`、`select` | 走 `ctx` 或显式传服务 |
 
 - 纯函数直接 import，才能**脱离 shell 单测**（不用造 `Ctx`）。
 - 有状态的东西走 `ctx`，才能**注入 / 替换 / mock**（`shell.test.ts` 的 fake term/theme/content）。
@@ -113,13 +117,18 @@ export function completePath(ctx: Ctx, current: string): Completion[]
 例外：`completeLine(ctx, line)` 确实需要完整 `Ctx`——它要读 `registry`/`config` 并分发给
 `command.complete(ctx, …)`，收窄反而拆散逻辑。**判断标准是「它真正碰了几个字段」，不是一刀切。**
 
-### 2.2 跨层工具放 `src/utils/`
+### 2.2 跨层功能分层组合，别让 term 认识 content
 
-不提供命令、只被多处复用的动作（如 `readDoc`：把一篇文档丢进 pager）放 `src/utils/`，
-**不和命令平级塞进 `commands/`**。`commands/` 里只有命令和它们的 `index.ts`。
+「把一篇文档丢进 pager」这类功能跨了 content / render / TUI，拆成两半：
 
-`utils/` 里的函数同样要收窄依赖：`readDoc(term, doc, text)` 只收 `Term`，
-不读 `fs`/`content`/`config`，正文由调用方取好再传进来。
+- **tui** 只收通用的 `PagerInput`，入口 `runPager(term, input)`；不认识 `DocMeta`、frontmatter
+- **content** 只管文档本身（`DocMeta`、markdown→ANSI、标题提取），**不认识 pager**
+- **commands/utils/** 放命令间共享的适配器：`pager-input.ts` 的 `toPagerInput(doc, text, options): PagerInput`
+- **命令** 组合：`await runPager(ctx.term, toPagerInput(doc, text))`
+
+适配器归命令层（只有它同时认识 content 和 tui），不塞进 content 也不塞进 shell 根目录
+（那是 tokenize/alias/registry 这类核心实现）。不单独开顶层的 `utils/` / `features/` 层，
+也不让 term import content。
 
 ### 3. 命令注册是手动的
 
@@ -164,9 +173,11 @@ aliases: {
 
 细节见 `docs/architecture.md`。三条硬约束先记住：
 
-- **pager/select**：一个 `Screen` 对象统一管生命周期（alternate screen + `Term.captureKeys()`
-  - `onResize` 整屏重排）、画布（`put`/`clear`/`status`/`flush`）和状态（`input`/`list`/`scroll`）。
-    命令里 `await` 它们，占用期间 shell 不会调 `term.read()`。
+- **TUI 组件**：一次全屏交互 = 一个 `TuiSession`，从构造（抢输入 + 进 alt screen）到 `close()`；
+  会话内是视图栈，视图实现 `TuiView = { draw(canvas), key?(event, session), wheel?, done?, onShow?, onHide? }`，
+  结束自己只 resolve `done`，弹栈/关会话由会话决定——视图不自己 show 自己。
+  命令只看到 `select(term, ...)` / `runPager(term, ...)`（配 `toPagerInput`），
+  不接触 alt screen / 输入锁 / resize。`captureInput` 排他，已接管时抛错；tui 只认 `TuiDriver` 接口。
 - **命令行着色**：`highlightLine()` 只能往字符之间插样式，**绝不能增删字符**（去色后必须和原行逐字符一致）。
 - **列对齐**：一律走 `render/table.ts`；单元格可带 ANSI/OSC 8，宽度按 `visibleWidth` 算，不做截断。
 

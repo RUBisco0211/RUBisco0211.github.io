@@ -16,34 +16,70 @@
 | **原生 CSS 变量**         | 主题切换只是换几个 CSS 变量，页面里没有别的 DOM 层要同步                                        |
 | **GitHub Pages Actions**  | 用户页挂在根路径，`base` 不用动；push 到 main 自动部署                                          |
 
-## TUI 组件：pager 和 select
+## TUI：TuiDriver / TuiSession / Canvas / TuiView
 
-两者都用 `term/tui/screen.ts` 的 `Screen` 对象。一个组件只跟它打交道：
-
-- **生命周期**：构造时切 alternate screen、`Term.captureKeys()` 接管键盘、监听 resize；`close()` 一次性归还
-- **画布**：`put(row, text)` / `clear(row)` / `status({ left, right, hints })` 攒一帧，`flush()` 写出去
-- **状态**：`input`（单行输入）、`list`（列表光标）、`scroll`（滚动视口）
+分层是单向的：`term`（xterm 封装）→ `tui`（整屏 UI 子系统）→ `shell`（命令拼装）。
 
 ```ts
-const screen = new Screen(term, { onKey, onWheel, onResize })
-screen.list.setTotal(items.length)
-screen.put(0, title)
-screen.status({ left: title, right: '10%', hints })
-screen.flush()
-screen.close()
+// term/driver.ts：tui 唯一认识的终端面
+interface TuiDriver {
+    cols, rows, onResize
+    enterAltScreen(), exitAltScreen()
+    drawRow(row, text)     // 定位 + 擦除 + 截断 + 写入
+    write(data)            // 裸写逃生舱（动画）
+    captureInput({ onKey, onWheel? })   // 键盘 + 滚轮共用一个排他锁
+    hasSelection(), getSelection(), clearSelection(), copy(text)
+}
 ```
 
-绘制循环和模式状态机仍由组件自己持有——pager 有多模式，select 有筛选，硬套同一个绘制抽象会泄漏。
+`Term` 实现 `TuiDriver`；REPL 用的 `read` / `println` / 补全 / 历史 / 主题不在接口里，tui 拿不到。
 
-| 文件                            | 职责                                                                               |
-| ------------------------------- | ---------------------------------------------------------------------------------- |
-| `term/tui/screen.ts`            | `Screen`：生命周期 + 画布 + `input`/`list`/`scroll`                                |
-| `term/tui/list.ts`              | `ListCursor`：选中索引 + 可视窗口                                                  |
-| `term/tui/scroll.ts`            | `Scroll`：offset / 翻页 / 滚轮累积                                                 |
-| `term/tui/text-input.ts`        | `TextInput`：Backspace + 可打印字符                                                |
-| `term/tui/status.ts`            | `statusBar()`：整行反显，放不下从头部丢提示                                        |
-| `term/tui/components/pager/`    | 整屏阅读器：`index.ts` 交互循环，`logic.ts` 纯逻辑（标题定位、进度文本、选区清理） |
-| `term/tui/components/select.ts` | 通用单选列表：`theme`、`history`、`tags`、`search` 用                              |
+一次全屏交互 = 一个 `TuiSession`，时间范围从构造（抢输入 + 进 alt screen）到 `close()`：
+
+```ts
+const session = new TuiSession(term) // TuiDriver
+const view = new SelectView(options) // 或 new PagerView(input) / new MatrixView()
+session.open(view) // 压栈 + 绘制
+await view.done // 视图结束自己；栈空时 session 自动 close()
+```
+
+- **`TuiSession`**：会话宿主 + 视图栈，唯一调度者。持输入锁、alt screen、resize 防抖；
+  提供 `canvas`、`open()`、`flash()`、`close()`、选区/剪贴板转发。视图结束只 resolve `done`，
+  弹栈还是关会话由栈深决定——**视图不自己 show 自己**
+- **`Canvas`**：纯画布（`put` / `clear` / `status` / `write`），不认识输入和会话
+- **`TuiView`**：`{ draw(canvas), key?(event, session), wheel?, done?, onShow?, onHide? }`。
+  `onHide` 在「被盖住 / 被弹走」时调用（停动画），`onShow` 在恢复时调用
+- **`SelectView`**：光标 + 筛选 + 滚轮选择 + 确认/取消，`onConfirm` 在弹栈前回调父视图
+- **`PagerView`**：通用阅读器（正文 + 滚动 + 搜索 + 复制），**不认识目录/标题**。
+  它只暴露 `renderedLines()` / `jumpTo(line)` 和 `bindings` 扩展点；目录这类功能由命令层组合，
+  见 `commands/utils/outline.ts`
+
+命令只看到薄壳 `select(term, ...)` / `runPager(term, ...)`（内部 `new TuiSession` + `open` + 等 `done`），
+文档排版在 `commands/utils/pager-input.ts` 的 `toPagerInput`：这是 cat / search / tags 共用的
+命令层辅助件，只有命令层同时认识 content 和 tui。目录功能同理放在 `commands/utils/outline.ts`：
+`toPagerInput` 通过 `bindings` 把 `t` 挂到 `openOutline()`，pager 不知道目录存在。
+命令不接触 alt screen / 输入锁 / resize。
+`matrix` 是 `views/matrix.ts` 的 `MatrixView`：动画循环用 `canvas.write` 逐帧写，`onShow` 启动、
+`onHide` 停止，命令只剩一行 `runMatrix(ctx.term)`。
+
+视图嵌套是**视图栈**，不是串行会话：pager 上再开目录选择器时，选择器压在 pager 上，选完自动弹回；
+而命令层的 tags → 选文章 → pager 是三个**串行会话**（前一个关闭才开下一个）。
+
+| 文件                            | 职责                                                                        |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| `term/driver.ts`                | `TuiDriver`：暴露给 tui 的窄接口（`Term` 实现）                             |
+| `tui/session.ts`                | `TuiSession`：会话生命周期 + 视图栈 + flash                                 |
+| `tui/canvas.ts`                 | `Canvas`：纯画布                                                            |
+| `tui/view.ts`                   | `TuiView` 接口                                                              |
+| `tui/components/list.ts`        | `ListCursor`：选中索引 + 可视窗口                                           |
+| `tui/components/scroll.ts`      | `Scroll`：offset / 翻页 / 滚轮累积                                          |
+| `tui/components/text-input.ts`  | `TextInput`：Backspace + 可打印字符                                         |
+| `tui/components/status.ts`      | `statusBar()`：整行反显，放不下从头部丢提示                                 |
+| `tui/views/select.ts`           | `SelectView` + `select(driver, ...)` 薄壳                                   |
+| `tui/views/pager.ts`            | `PagerView`（通用阅读器：不含目录概念）+ `runPager(driver, PagerInput)`     |
+| `tui/views/matrix.ts`           | `MatrixView`：数字雨动画 + `runMatrix(driver)`                              |
+| `commands/utils/pager-input.ts` | `toPagerInput(doc, text, opts)`：命令层共享的 Document → PagerInput 适配器  |
+| `commands/utils/outline.ts`     | 目录功能：`locateTitles` + `openOutline`（通过 pager 的 `bindings` 挂上去） |
 
 命令里 `await` 它们，所以占用期间 shell 不会去调 `term.read()`——两者天然互斥，shell 不用改。
 
