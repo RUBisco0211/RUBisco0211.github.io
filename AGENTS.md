@@ -96,13 +96,15 @@ interface Ctx {
 
 命令用到的东西按「有没有状态」分成两类，**不要合并成一条通道**：
 
-| 性质                                 | 例子                                                                               | 怎么拿                |
-| ------------------------------------ | ---------------------------------------------------------------------------------- | --------------------- |
-| **纯函数**（无状态、无 I/O、确定性） | `path.*`、`fs.buildFs/lookup/getNode`、`complete.*`、`fail/printUsage`             | 直接 `import`         |
-| **有状态 / 生命周期**                | `term`、`theme`、`content`、`cwd`、`chdir`、`run`、`prefill`、`runPager`、`select` | 走 `ctx` 或显式传服务 |
+| 性质                                 | 例子                                                                   | 怎么拿        |
+| ------------------------------------ | ---------------------------------------------------------------------- | ------------- |
+| **纯函数**（无状态、无 I/O、确定性） | `path.*`、`fs.buildFs/lookup/getNode`、`complete.*`、`fail/printUsage` | 直接 `import` |
+| **有状态 / 生命周期**                | `term`、`theme`、`content`、`cwd`、`chdir`、`run`、`prefill`           | 走 `ctx`      |
 
 - 纯函数直接 import，才能**脱离 shell 单测**（不用造 `Ctx`）。
 - 有状态的东西走 `ctx`，才能**注入 / 替换 / mock**（`shell.test.ts` 的 fake term/theme/content）。
+- TUI 入口（`select` / `runPager` / `runMatrix`）也不挂 `ctx`：直接 import，显式传 `ctx.term`
+  （结构上就是 `TuiDriver`），这样视图层能脱离 shell 单测。
 - **不要把纯函数挂到 `ctx` 上**（`ctx.completePath()` 之类）：`Ctx` 会变成 god object，纯函数测试也被迫造整个 shell。
 
 **纯函数要收窄签名**：只收它真正需要的字段，不收整个 `Ctx`。
