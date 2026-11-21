@@ -31,7 +31,7 @@ src/
   render/             ANSI 原语、显示宽度、折行、语法着色、markdown→ANSI、列对齐
   term/               xterm 封装、pager/select 整屏组件、命令历史
     pager/             index.ts 交互循环 + logic.ts 纯逻辑
-  shell/              tokenize / alias / registry / fs / path / complete / error / usage
+  shell/              tokenize / alias / registry / fs / path / complete / error
     commands/         一个文件一条命令，自动注册
   content/            内容树视图、字数格式化、搜索
   theme/              themes/<名字>.ts（每套含 light/dark 两个变体）+ 聚合 + store
@@ -127,6 +127,12 @@ aliases: {
 - `term/select.ts` 通用单选列表：`theme` 和 `history` 用，支持 `filterable` 的输入筛选
 
 命令里 `await` 它们，所以占用期间 shell 不会去调 `term.read()`——两者天然互斥，shell 不用改。
+
+### 7.1 窄终端直接遮罩
+
+字符网格在窄窗口里排不下（状态栏溢出、柱状图折行、表格对不齐）。所以不做逐组件降级，
+而是统一门槛 `term/size.ts`：低于 `MIN_COLS`/`MIN_ROWS` 时 `main.ts` 盖上 `#size-mask`
+并 `Term.enableInput(false)`，尺寸回来自动恢复。`pagerStatus`/`barRows` 只保证 ≥ 门槛时不溢出。
 
 `pagerStatus()` 的操作提示按**重要性从低到高**排列，放不下时从头部丢，`q 退出` 留到最后。
 

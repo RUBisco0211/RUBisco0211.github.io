@@ -84,3 +84,24 @@ test('空输入指向 cwd', () => {
     assert.equal(self.kind, 'dir')
     if (self.kind === 'dir') assert.equal(self.path, '/blog')
 })
+
+test('lookup 大小写不敏感', () => {
+    const fs = buildFs(docs)
+    // 目录和文件名都忽略大小写
+    const blog = lookup(fs, '/', 'BLOG')
+    assert.equal(blog.kind, 'dir')
+    if (blog.kind === 'dir') assert.equal(blog.path, '/blog')
+
+    const hello = lookup(fs, '/blog/2026', 'HELLO')
+    assert.equal(hello.kind, 'file')
+
+    const withExt = lookup(fs, '/blog/2026', 'Hello.MD')
+    assert.equal(withExt.kind, 'file')
+})
+
+test('lookup 返回大小写规范的真实路径', () => {
+    const fs = buildFs(docs)
+    const found = lookup(fs, '/', 'Blog/2026')
+    assert.equal(found.kind, 'dir')
+    if (found.kind === 'dir') assert.equal(found.path, '/blog/2026')
+})

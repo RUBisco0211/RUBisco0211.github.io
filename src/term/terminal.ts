@@ -44,6 +44,8 @@ export class Term {
     private lastListed = ''
     /** 有 TUI（pager）接管键盘时，Tab 补全要让路 */
     private capturing = false
+    /** 窗口太小时关掉，键盘/滚轮都不再生效 */
+    private inputBlocked = false
     private disposed = false
 
     constructor(host: HTMLElement, opts: TermOptions) {
@@ -242,9 +244,7 @@ export class Term {
         }
     }
 
-    /** 终端当前列数，给需要按宽度排版的命令用 */
-    /**
-     * 接管命令行的实时着色。
+    /** 接管命令行的实时着色。
      *
      * readline 每次重绘会把 highlightPrompt(prompt) + highlight(line, pos) 拼起来，
      * 所以返回的字符串必须保持字符原样、只插样式。
@@ -292,6 +292,17 @@ export class Term {
     }
 
     /**
+     * 开关键盘输入。窗口太小时上层会盖遮罩，同时把 stdin 关掉，
+     * 免得按键继续落到 xterm / readline 里。
+     */
+    enableInput(enabled: boolean): void {
+        this.inputBlocked = !enabled
+        this.xterm.options.disableStdin = !enabled
+        if (enabled) this.xterm.focus()
+        else this.xterm.blur()
+    }
+
+    /**
      * 拦截 Tab。
      *
      * 用捕获阶段的 DOM 监听，而不是 xterm 的 attachCustomKeyEventHandler ——
@@ -301,7 +312,7 @@ export class Term {
         this.host.addEventListener(
             'keydown',
             (event) => {
-                if (event.key !== 'Tab' || this.capturing) return
+                if (event.key !== 'Tab' || this.capturing || this.inputBlocked) return
                 event.preventDefault()
                 event.stopPropagation()
                 handler()
@@ -325,12 +336,14 @@ export class Term {
         const onKey = (event: KeyboardEvent): void => {
             event.preventDefault()
             event.stopPropagation()
+            if (this.inputBlocked) return
             handler(event)
         }
 
         const onWheelEvent = (event: WheelEvent): void => {
             event.preventDefault()
             event.stopPropagation()
+            if (this.inputBlocked) return
             onWheel?.(event.deltaY, event.deltaMode)
         }
 

@@ -74,7 +74,20 @@ export function getNode(fs: Fs, abs: string): FsNode | undefined {
 
 function findFile(fs: Fs, abs: string): FileEntry | undefined {
     const { dir, base } = splitPath(abs)
-    return fs.get(dir)?.files.find((file) => file.name === base)
+    const dirPath = canonicalPath(fs, dir)
+    if (dirPath === undefined) return undefined
+    const needle = base.toLowerCase()
+    return fs.get(dirPath)?.files.find((file) => file.name.toLowerCase() === needle)
+}
+
+/** fs 里的真实路径可能大小写不同，按小写比较找回规范写法 */
+function canonicalPath(fs: Fs, path: string): string | undefined {
+    if (fs.has(path)) return path
+    const needle = path.toLowerCase()
+    for (const key of fs.keys()) {
+        if (key.toLowerCase() === needle) return key
+    }
+    return undefined
 }
 
 export type Target =
@@ -85,19 +98,25 @@ export type Target =
 /**
  * 把「相对 cwd 的用户输入」解析成一个存在的目标。
  * 顺带接受带扩展名的写法：cat hello.md 等价于 cat hello。
+ * 大小写不敏感：cd Blog 和 cd blog 等价，返回的 path 用真实大小写。
  */
 export function lookup(fs: Fs, cwd: string, arg: string): Target {
     const path = resolvePath(cwd, arg)
     return (
         lookupAbs(fs, path) ??
-        lookupAbs(fs, path.replace(/\.mdx?$/, '')) ?? { kind: 'missing', path }
+        lookupAbs(fs, path.replace(/\.mdx?$/i, '')) ?? { kind: 'missing', path }
     )
 }
 
 function lookupAbs(fs: Fs, path: string): Target | undefined {
-    const node = fs.get(path)
-    if (node) return { kind: 'dir', path, node }
+    const dirPath = canonicalPath(fs, path)
+    if (dirPath !== undefined) return { kind: 'dir', path: dirPath, node: fs.get(dirPath)! }
+
     const file = findFile(fs, path)
-    if (file) return { kind: 'file', path, file }
+    if (file) {
+        const { dir } = splitPath(path)
+        const dirPath = canonicalPath(fs, dir) ?? dir
+        return { kind: 'file', path: `${dirPath === '/' ? '' : dirPath}/${file.name}`, file }
+    }
     return undefined
 }

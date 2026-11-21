@@ -133,6 +133,29 @@ test('空文档返回空串', () => {
     assert.equal(renderMarkdown('\n\n'), '')
 })
 
+test('表格缺列时不崩，缺失单元格当空处理', () => {
+    const out = plain(renderMarkdown('| a | b |\n| --- | --- |\n| 1 |'))
+    assert.match(out, /a\s*│\s*b/)
+    assert.match(out, /1\s*│/)
+})
+
+test('未闭合代码围栏也能画出闭合的框', () => {
+    const out = plain(renderMarkdown('```js\nconst a = 1'))
+    assert.match(out, /┌.*js/)
+    assert.match(out, /│ const a = 1/)
+    assert.match(out, /└/)
+})
+
+test('setext 风格的标题也当成标题', () => {
+    const out = plain(renderMarkdown('标题\n==='))
+    assert.match(out, /# 标题/)
+})
+
+test('引用块加左侧竖线', () => {
+    const out = plain(renderMarkdown('> 引用一行'))
+    assert.match(out, /│ 引用一行/)
+})
+
 test('headingTitles 抽出带 # 前缀的标题', () => {
     assert.deepEqual(headingTitles('# 一级\n\n正文\n\n## 二级 **粗**\n\n### 三级'), [
         '# 一级',

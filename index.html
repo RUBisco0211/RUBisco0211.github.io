@@ -59,11 +59,34 @@
             #boot p {
                 margin: 0;
             }
+            /* 终端太小时的遮罩：和 boot 同一套样式，只是默认隐藏 */
+            #size-mask {
+                position: fixed;
+                inset: 0;
+                z-index: 2;
+                display: grid;
+                place-items: center;
+                background: var(--boot-bg);
+                color: var(--boot-fg);
+                font:
+                    14px/1.6 ui-monospace,
+                    SFMono-Regular,
+                    Menlo,
+                    monospace;
+            }
+            #size-mask p {
+                margin: 0;
+            }
+            #size-mask[hidden] {
+                display: none;
+            }
         </style>
     </head>
     <body>
         <!-- 终端挂载后由 main.ts 移除 -->
         <div id="boot"><p>tty.blog · 加载中…</p></div>
+        <!-- 终端太小时盖上去，阻止继续操作；文案由 main.ts 填 -->
+        <div id="size-mask" hidden><p></p></div>
         <div id="app">
             <!-- 终端必须有独立的、无内边距的父元素：FitAddon 读的是父元素的
            computed height，外面带 padding 会让它多算出行数，最后一行被裁掉 -->

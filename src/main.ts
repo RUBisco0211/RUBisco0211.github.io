@@ -13,6 +13,7 @@ import { displayPath } from './shell/path.ts'
 import { formatTable } from './render/table.ts'
 import { blue, dim, green } from './render/ansi.ts'
 import { Term } from './term/terminal.ts'
+import { sizeHint, tooSmall } from './term/size.ts'
 import { findTheme } from './theme/index.ts'
 import { createThemeStore } from './theme/store.ts'
 
@@ -31,6 +32,22 @@ const term = new Term(host, {
 
 // 终端挂上即可撤掉首屏 loading 占位符
 document.getElementById('boot')?.remove()
+
+const sizeMask = document.getElementById('size-mask')
+if (sizeMask) {
+    const message = sizeMask.querySelector('p')
+    if (message) message.textContent = sizeHint()
+}
+
+/** 窗口太小时盖遮罩并切断输入；尺寸回来后恢复 */
+function syncSizeMask(): void {
+    const blocked = tooSmall(term.cols, term.rows)
+    if (sizeMask) sizeMask.hidden = !blocked
+    term.enableInput(!blocked)
+}
+
+syncSizeMask()
+term.onResize(syncSizeMask)
 
 const theme = createThemeStore(term, config.defaultTheme)
 const fs = buildFs(content.docs)
