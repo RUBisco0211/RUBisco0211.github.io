@@ -2,20 +2,18 @@
 
 终端风格的纯静态个人站点。没有导航栏、没有卡片列表，访客通过命令浏览内容。
 
-这份文档记录**已经定下来的架构决策**。改动前先读，尤其是「核心契约」和「容易踩的坑」两节。
+这份文档记录**已经定下来的架构决策**。改动前先读「核心契约」。
 
-## 技术栈与理由
+## 文档索引
 
-| 选型                      | 理由                                                                                            |
-| ------------------------- | ----------------------------------------------------------------------------------------------- |
-| **xterm.js**              | 要的是字符网格 + ANSI + scrollback。不用它就得自己实现渲染循环                                  |
-| **xterm-readline**        | 行编辑器（回显、光标、多行折行、CJK 宽度）不要自己写。它缺 Tab 补全，我们自己补                 |
-| **marked**                | 只要 token 树，不要 HTML。markdown-it 是 HTML 渲染器，产出的 `<p>` 还得再剥一遍                 |
-| **@speed-highlight/core** | 内置终端 ANSI 输出，零依赖，1.5KB 核心 + 1KB/语言。highlight.js 只出 HTML，cli-highlight 已停更 |
-| **Vite**                  | dev server + 插件（内容编译）+ 打包                                                             |
-| **无框架**                | 状态是「REPL 循环 + 只读文件系统」，不是派生 UI。React 在这里只增加协调开销                     |
-| **原生 CSS 变量**         | 主题切换只是换几个 CSS 变量，页面里没有别的 DOM 层要同步                                        |
-| **GitHub Pages Actions**  | 用户页挂在根路径，`base` 不用动；push 到 main 自动部署                                          |
+| 文档                   | 内容                                                  |
+| ---------------------- | ----------------------------------------------------- |
+| **AGENTS.md**（本文）  | 必读：目录结构、核心契约、开发命令、最容易踩的几个坑  |
+| `docs/architecture.md` | 选型理由、TUI 组件、命令行着色、列对齐                |
+| `docs/pitfalls.md`     | 全部踩坑记录（readline 私有 API、FitAddon、定时器等） |
+| `docs/deployment.md`   | GitHub Pages 部署、`base` 路径                        |
+| `docs/writing.md`      | 写文章：frontmatter、markdown 支持范围、图片放置      |
+| `docs/non-goals.md`    | 明确不做的事                                          |
 
 ## 目录
 
@@ -154,49 +152,22 @@ aliases: {
 - slug 就是路径：`blog/从nvm迁移到fnm` → `/blog/从nvm迁移到fnm`
 - 目录结构由 slug 推导（`buildFs`），内容想嵌套不用改代码
 - 内部一律用绝对路径；显示给用户才用 `displayPath()` 转成 `~/blog`
-- 命令接受相对路径、`~`、`..`，以及带 `.md` 后缀的写法
+- 命令接受相对路径、`~`、`..`，以及带 `.md` 后缀的写法（大小写不敏感）
 
-### 7. TUI 组件：pager 和 select
-
-两个都走同一套模式：**alternate screen**（`\x1b[?1049h` / `l`）+ `Term.captureKeys()` 全量接管键盘 +
-逐行 `\x1b[{row};1H\x1b[2K` 重绘 + `onResize` 重排（alt buffer 不 reflow，尺寸变了必须整屏重来）。
-
-- `term/pager/` 整屏阅读器：`index.ts` 是交互循环（搜索 `/` 后 `n`/`N`、目录跳转 `t`、滚轮、翻页），
-  `logic.ts` 是纯逻辑（滚动换算、标题定位、状态栏、选区清理），不碰 `Term`，直接在 node 里测
-- `term/select.ts` 通用单选列表：`theme` 和 `history` 用，支持 `filterable` 的输入筛选
-
-命令里 `await` 它们，所以占用期间 shell 不会去调 `term.read()`——两者天然互斥，shell 不用改。
-
-### 7.1 窄终端直接遮罩
+### 7. 窄终端直接遮罩
 
 字符网格在窄窗口里排不下（状态栏溢出、柱状图折行、表格对不齐）。所以不做逐组件降级，
 而是统一门槛 `term/size.ts`：低于 `MIN_COLS`/`MIN_ROWS` 时 `main.ts` 盖上 `#size-mask`
 并 `Term.enableInput(false)`，尺寸回来自动恢复。`pagerStatus`/`barRows` 只保证 ≥ 门槛时不溢出。
 
-`pagerStatus()` 的操作提示按**重要性从低到高**排列，放不下时从头部丢，`q 退出` 留到最后。
+### 8. TUI / 着色 / 列对齐
 
-### 8. 命令行着色
+细节见 `docs/architecture.md`。三条硬约束先记住：
 
-用 `xterm-readline` 官方的 `Highlighter` 接口（`Term.setLineHighlighter`），它每次重绘会把
-`highlightPrompt(prompt) + highlight(line, pos)` 拼起来，光标位置按**未着色**的原始行算。
-
-所以 `highlightLine()` 只能往字符之间插样式，**绝不能增删字符**（测试里有断言：去色后必须和原行逐字符一致）。
-认得的命令青、别名品红、不认识的红、选项黄、引号内容绿；参数一律默认色。
-
-### 9. 列对齐统一走 `render/table.ts`
-
-ls / help / cat / stats / Tab 补全都是「逐行、若干单元格、按列宽补齐」这一类。
-`formatTable(rows, options)` 负责测列宽、逐列补齐、按 gap 拼接、`trimEnd`；
-`formatRow()` 用显式列宽（固定列或多块共享宽度时用），`rowWidth()` 给画横线用。
-单元格可以带 ANSI / OSC 8，宽度一律按 `visibleWidth` 算；**不做截断**，需要截的先 `truncateTo`。
-
-柱状行（label + 柱 + 右对齐数值）抽在 `render/barRows.ts`，stats 用它排版。
-（tags 的标签总览和文章列表已改成整屏 select，不再走表格。）
-
-neofetch 的信息区是三张小表（个人 / 终端 / 站点），每张表各自用自己的列宽对齐，
-分隔线统一取整块最大宽度；art 与信息区的左右并排仍归 `layout()`。
-
-例外：markdown 表格（单元格折行、定宽压缩）保留自己的实现，没有塞进 table 抽象。
+- **pager/select**：alternate screen + `Term.captureKeys()` 全量接管键盘 + `onResize` 整屏重排
+  （alt buffer 不 reflow）。命令里 `await` 它们，占用期间 shell 不会调 `term.read()`。
+- **命令行着色**：`highlightLine()` 只能往字符之间插样式，**绝不能增删字符**（去色后必须和原行逐字符一致）。
+- **列对齐**：一律走 `render/table.ts`；单元格可带 ANSI/OSC 8，宽度按 `visibleWidth` 算，不做截断。
 
 ## 开发
 
@@ -211,62 +182,11 @@ npm run format        # prettier
 测试用 `node --test` 而非 vitest/tsx：Node 26 原生支持类型剥离，零依赖。
 因此**所有相对 import 必须带 `.ts` 扩展名**（tsconfig 开了 `allowImportingTsExtensions`）。
 
-## 部署
+## 最容易踩的坑（全文见 `docs/pitfalls.md`）
 
-线上：<https://rubisco0211.github.io/>，仓库 `RUBisco0211/RUBisco0211.github.io`（GitHub Pages **用户页**）。
-
-```bash
-git push            # 推到 main 就自动部署
-```
-
-`.github/workflows/deploy.yml`：`npm ci → test → build → upload-pages-artifact → deploy-pages`。
-Pages 的 `build_type` 必须是 `workflow`（不是 `legacy`，那是 Jekyll 分支构建）：
-
-```bash
-gh api -X PUT repos/RUBisco0211/RUBisco0211.github.io/pages -f build_type=workflow
-```
-
-**`base` 路径**：用户页是根路径，`vite.config.ts` 保持默认 `/`。
-如果改成**项目页**（`<user>.github.io/<repo>`），必须设 `base: '/<repo>/'` —— 正文和静态资源都靠
-`import.meta.env.BASE_URL` 拼地址，`scripts/copy-content.ts` 写的 `dist/content/` 也在同一个前缀下。
-
-## 容易踩的坑
-
-1. **readline 的私有 API**
-   `Term.showCompletions()` 用的是 `printPrompt` + `state.reanchor`（没有公开的「打印并重绘」接口）；
-   `Term.read(prompt, initial)` 靠"排一个空 write 再 updateLine"来等 readline 建好 state。
-   `tests/term/readline.test.mjs` 里有一份同样的调用序列——它是**副本**，改 `terminal.ts` 时必须手动同步，否则测试全绿但行为已坏（已经发生过一次）。
-
-2. **FitAddon 读的是父元素的 computed `height`**
-   它只扣掉 `.xterm` 自己的 padding，**不管父元素的 padding**。所以终端必须放在无内边距的 `#term` 里，留白由外层 `#app` 负责。否则会多算出行数，最后一行被裁掉。
-
-3. **字体是异步的**
-   首帧用回退字体算出的行高偏小，真字体到位后单元格变高，屏幕会超出容器。所以 `Term` 在 `document.fonts.ready` 和 `loadingdone` 时都要重新 `fit()`。
-
-4. **prettier 必须跑**
-   `terminal.ts` 曾被编辑器改成双引号 + 分号，导致脚本替换静默失败、改动没生效。
-   `.prettierrc` 已定死：无分号、单引号、printWidth 100。`content/` 不在格式化范围内（手写内容）。
-
-5. **CJK 对齐要用 `visibleWidth()`**
-   按 `text.length` 算会把中文和 ANSI 转义序列一起算错。对齐用 `padEnd()`（在 `src/render/width.ts`）。
-
-6. **`clear` 的时机**
-   `xterm.clear()` 会让 readline 的 `promptMarker` 失效，只能在两次 `read()` 之间调用。
-
-7. **回车后命令行不带颜色**
-   readline 提交前会调 `State.refreshUnhighlighted()` 把这行重绘成无样式。试过覆盖它让颜色保留，
-   但那是改库的内部行为，权衡后撤掉了（`tests/term/readline.test.mjs` 里那条用例记录着默认行为）。
-
-8. **定时器要清干净**
-   `matrix` 和 pager 的 resize 防抖都用 `setTimeout`。退出路径必须 `clearTimeout` + 摘掉
-   `captureKeys`/`onResize` 的监听，否则退出后还在往终端写东西。用裸 `setTimeout` 而不是
-   `window.setTimeout`——测试在 node 里跑，`window` 不存在。
-
-## 明确不做的事
-
-- **管道 / 重定向 / 退出码**：没有进程模型，不做（用 `search` 代替 `cat | grep`）
-- **构建期生成正文副本**：全站只保留 `content/` 一份内容
-- **自己写 tokenizer / 行编辑器**：有现成库就用现成的
-- **SEO 预渲染**：暂时不做。真要做，成本是「每篇生成静态 HTML + sitemap」，`content/` 里的 `.md` 已经是完整真相源
-- **DOM overlay 阅读器**：`cat` 走 ANSI 整屏 pager。之前做过一版 DOM overlay，删掉了——两套渲染管线会漂移
-- **移动端适配**：字符网格在小屏上没有可用性，不考虑
+1. **readline 私有 API**：`showCompletions`/`read` 依赖非公开接口，`tests/term/readline.test.mjs` 是**副本**，改 `terminal.ts` 必须手动同步。
+2. **FitAddon 读父元素 padding**：终端必须放在无内边距的 `#term` 里，留白交给外层 `#app`。
+3. **字体异步**：`document.fonts.ready` 和 `loadingdone` 都要重新 `fit()`。
+4. **prettier 必须跑**：`.prettierrc` 定死无分号/单引号/printWidth 100。
+5. **CJK 对齐用 `visibleWidth()`**，不要用 `text.length`。
+6. **定时器要清干净**：退出路径 `clearTimeout` + 摘监听；用裸 `setTimeout`（测试在 node 跑）。
