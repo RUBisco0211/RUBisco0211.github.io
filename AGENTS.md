@@ -77,6 +77,8 @@ interface Ctx {
   registry
   cwd: string // getter，永远反映 shell 当前目录
   chdir(target): string | null // 成功 null，失败返回错误消息
+  run(line): Promise<void> // 递归执行另一条命令（走完整 alias 展开和分发）
+  prefill(line): void // 填到下一次提示符，让用户自己回车
 }
 ```
 
@@ -86,6 +88,39 @@ interface Ctx {
 - 错误：命令 `throw` 一个 `ShellError`（或 `fail(...)`），由 `shell.run()` 捕获后交给
   `term.printError()` 统一染红；可选提示用第二参数（如可选值列表）。意外异常不吞，继续抛给 `main.ts` 兜底。
   错误怎么渲染是终端层的事（`Term.printError`），shell 只给消息和提示。
+
+### 2.1 依赖分两条通道：纯函数 vs 生命周期
+
+命令用到的东西按「有没有状态」分成两类，**不要合并成一条通道**：
+
+| 性质                                 | 例子                                                                                       | 怎么拿                |
+| ------------------------------------ | ------------------------------------------------------------------------------------------ | --------------------- |
+| **纯函数**（无状态、无 I/O、确定性） | `path.*`、`fs.buildFs/lookup/getNode`、`complete.*`、`fail/printUsage`                     | 直接 `import`         |
+| **有状态 / 生命周期**                | `term`、`theme`、`content`、`cwd`、`chdir`、`run`、`prefill`、`readDoc`、`select`、`pager` | 走 `ctx` 或显式传服务 |
+
+- 纯函数直接 import，才能**脱离 shell 单测**（不用造 `Ctx`）。
+- 有状态的东西走 `ctx`，才能**注入 / 替换 / mock**（`shell.test.ts` 的 fake term/theme/content）。
+- **不要把纯函数挂到 `ctx` 上**（`ctx.completePath()` 之类）：`Ctx` 会变成 god object，纯函数测试也被迫造整个 shell。
+
+**纯函数要收窄签名**：只收它真正需要的字段，不收整个 `Ctx`。
+
+```ts
+// 好：Ctx 结构上满足 { cwd, fs }，命令里 completePath(ctx, …) 原样可用
+export function completePath(scope: { cwd: string; fs: Fs }, current: string): Completion[]
+// 差：收了 9 个字段只用 2 个，测试被迫 createShell
+export function completePath(ctx: Ctx, current: string): Completion[]
+```
+
+例外：`completeLine(ctx, line)` 确实需要完整 `Ctx`——它要读 `registry`/`config` 并分发给
+`command.complete(ctx, …)`，收窄反而拆散逻辑。**判断标准是「它真正碰了几个字段」，不是一刀切。**
+
+### 2.2 跨层工具放 `src/utils/`
+
+不提供命令、只被多处复用的动作（如 `readDoc`：把一篇文档丢进 pager）放 `src/utils/`，
+**不和命令平级塞进 `commands/`**。`commands/` 里只有命令和它们的 `index.ts`。
+
+`utils/` 里的函数同样要收窄依赖：`readDoc(term, doc, text)` 只收 `Term`，
+不读 `fs`/`content`/`config`，正文由调用方取好再传进来。
 
 ### 3. 命令注册是手动的
 
