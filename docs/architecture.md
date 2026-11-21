@@ -35,15 +35,15 @@ screen.close()
 
 绘制循环和模式状态机仍由组件自己持有——pager 有多模式，select 有筛选，硬套同一个绘制抽象会泄漏。
 
-| 文件                     | 职责                                                                               |
-| ------------------------ | ---------------------------------------------------------------------------------- |
-| `term/tui/screen.ts`     | `Screen`：生命周期 + 画布 + `input`/`list`/`scroll`                                |
-| `term/tui/list.ts`       | `ListCursor`：选中索引 + 可视窗口                                                  |
-| `term/tui/scroll.ts`     | `Scroll`：offset / 翻页 / 滚轮累积                                                 |
-| `term/tui/text-input.ts` | `TextInput`：Backspace + 可打印字符                                                |
-| `term/tui/status.ts`     | `statusBar()`：整行反显，放不下从头部丢提示                                        |
-| `term/tui/pager/`        | 整屏阅读器：`index.ts` 交互循环，`logic.ts` 纯逻辑（标题定位、进度文本、选区清理） |
-| `term/tui/select.ts`     | 通用单选列表：`theme`、`history`、`tags`、`search` 用                              |
+| 文件                            | 职责                                                                               |
+| ------------------------------- | ---------------------------------------------------------------------------------- |
+| `term/tui/screen.ts`            | `Screen`：生命周期 + 画布 + `input`/`list`/`scroll`                                |
+| `term/tui/list.ts`              | `ListCursor`：选中索引 + 可视窗口                                                  |
+| `term/tui/scroll.ts`            | `Scroll`：offset / 翻页 / 滚轮累积                                                 |
+| `term/tui/text-input.ts`        | `TextInput`：Backspace + 可打印字符                                                |
+| `term/tui/status.ts`            | `statusBar()`：整行反显，放不下从头部丢提示                                        |
+| `term/tui/components/pager/`    | 整屏阅读器：`index.ts` 交互循环，`logic.ts` 纯逻辑（标题定位、进度文本、选区清理） |
+| `term/tui/components/select.ts` | 通用单选列表：`theme`、`history`、`tags`、`search` 用                              |
 
 命令里 `await` 它们，所以占用期间 shell 不会去调 `term.read()`——两者天然互斥，shell 不用改。
 

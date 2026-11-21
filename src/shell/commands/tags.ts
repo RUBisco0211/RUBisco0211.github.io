@@ -1,6 +1,6 @@
 import type { DocMeta } from '../../content/types.ts'
 import { dim } from '../../render/ansi.ts'
-import { select } from '../../term/tui/select.ts'
+import { select } from '../../term/tui/components/select.ts'
 import { readDoc } from '../../utils/reader.ts'
 import { fail } from '../error.ts'
 import type { Command, Ctx } from '../types.ts'

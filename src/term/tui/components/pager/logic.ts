@@ -4,7 +4,7 @@
  * 滚动/状态栏/输入/光标分别在 `scroll.ts`、`status.ts`、`text-input.ts`、`list.ts`。
  */
 
-import { stripAnsi } from '../../../render/width.ts'
+import { stripAnsi } from '../../../../render/width.ts'
 
 /**
  * 把 xterm 的选区文本整理成适合粘贴的样子。

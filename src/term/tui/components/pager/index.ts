@@ -1,10 +1,10 @@
-import { cyan, inverse, moveTo } from '../../../render/ansi.ts'
-import { markMatches, matchesQuery } from '../../../render/mark.ts'
-import { padEnd, truncateTo, visibleWidth } from '../../../render/width.ts'
-import { wrapAnsi } from '../../../render/wrap.ts'
-import { keyChord, lookupKey, resolveKeys, type Keymap } from '../../keys.ts'
-import type { Term } from '../../terminal.ts'
-import { Screen } from '../screen.ts'
+import { cyan, inverse, moveTo } from '../../../../render/ansi.ts'
+import { markMatches, matchesQuery } from '../../../../render/mark.ts'
+import { padEnd, truncateTo, visibleWidth } from '../../../../render/width.ts'
+import { wrapAnsi } from '../../../../render/wrap.ts'
+import { keyChord, lookupKey, resolveKeys, type Keymap } from '../../../keys.ts'
+import type { Term } from '../../../terminal.ts'
+import { Screen } from '../../screen.ts'
 import { cleanSelection, locateTitles, progress } from './logic.ts'
 
 export interface PagerLabels {

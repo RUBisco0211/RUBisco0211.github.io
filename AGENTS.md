@@ -28,7 +28,8 @@ src/
   storage.ts          localStorage 唯一入口（统一前缀）
   render/             ANSI 原语、显示宽度、折行、语法着色、markdown→ANSI、列对齐
   term/               xterm 封装、整屏 TUI、命令历史
-    tui/              screen.ts（Screen 状态容器）+ pager/ + select.ts + list/scroll/status/text-input
+    tui/              screen.ts（Screen 状态容器）+ list/scroll/status/text-input
+      components/     pager/ + select.ts
   shell/              tokenize / alias / registry / fs / path / complete / error
     commands/         一条命令一个文件 + 手动在 index.ts 注册
   utils/              跨层工具（reader.ts：把一篇文档丢进 pager）
