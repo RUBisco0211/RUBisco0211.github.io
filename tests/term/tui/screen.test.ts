@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { test } from 'vitest'
+import { test, vi } from 'vitest'
 import { Screen } from '@/term/tui/screen.ts'
 import type { Term } from '@/term/terminal.ts'
 
@@ -88,4 +88,62 @@ test('resize 会防抖后回调一次', async () => {
     assert.equal(calls, 0) // 还没到防抖时间
     await new Promise((resolve) => setTimeout(resolve, 20))
     assert.equal(calls, 1) // 连发只回调一次
+})
+
+test('flash 默认右上角、反显', () => {
+    const fake = fakeTerm(40, 10)
+    const screen = new Screen(fake.term, { onKey: () => {} })
+    screen.flash('ok')
+    const out = fake.writes.at(-1) ?? ''
+    // ' ok ' 宽 4，右上角 = 第 1 行、第 37 列
+    assert.ok(out.includes('\x1b[1;37H'))
+    assert.ok(out.includes('\x1b[7m'))
+})
+
+test('flash 位置/样式/时长可配，到期后恢复', () => {
+    vi.useFakeTimers()
+    try {
+        const fake = fakeTerm(40, 10)
+        const screen = new Screen(fake.term, { onKey: () => {} })
+        let restored = false
+
+        screen.flash('ok', {
+            position: 'bottom-left',
+            duration: 500,
+            paint: (text) => `<${text}>`,
+            restore: () => {
+                restored = true
+            },
+        })
+
+        const out = fake.writes.at(-1) ?? ''
+        assert.ok(out.includes('\x1b[10;1H')) // 左下角
+        assert.ok(out.includes('< ok >'))
+
+        vi.advanceTimersByTime(499)
+        assert.equal(restored, false)
+        vi.advanceTimersByTime(1)
+        assert.equal(restored, true)
+    } finally {
+        vi.useRealTimers()
+    }
+})
+
+test('close 会取消未到期的 flash', () => {
+    vi.useFakeTimers()
+    try {
+        const fake = fakeTerm(40, 10)
+        const screen = new Screen(fake.term, { onKey: () => {} })
+        let restored = false
+        screen.flash('ok', {
+            restore: () => {
+                restored = true
+            },
+        })
+        screen.close()
+        vi.advanceTimersByTime(5000)
+        assert.equal(restored, false)
+    } finally {
+        vi.useRealTimers()
+    }
 })

@@ -1,5 +1,12 @@
-import { ALT_SCREEN_OFF, ALT_SCREEN_ON, CLEAR_SCREEN, ERASE_LINE, moveTo } from '@/render/ansi.ts'
-import { truncateTo } from '@/render/width.ts'
+import {
+    ALT_SCREEN_OFF,
+    ALT_SCREEN_ON,
+    CLEAR_SCREEN,
+    ERASE_LINE,
+    inverse,
+    moveTo,
+} from '@/render/ansi.ts'
+import { truncateTo, visibleWidth } from '@/render/width.ts'
 import type { Term } from '@/term/terminal.ts'
 import { ListCursor } from './list.ts'
 import { Scroll } from './scroll.ts'
@@ -12,6 +19,19 @@ export interface ScreenOptions {
     readonly onResize?: (screen: Screen) => void
     /** resize 防抖毫秒，默认 80 */
     readonly resizeDebounce?: number
+}
+
+export type FlashPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+
+export interface FlashOptions {
+    /** 提示位置，默认 'top-right' */
+    readonly position?: FlashPosition
+    /** 持续毫秒，默认 1200 */
+    readonly duration?: number
+    /** 提示样式，默认反显 */
+    readonly paint?: (text: string) => string
+    /** 提示消失后重画被盖住的内容；不给就只把光标挪回状态行 */
+    readonly restore?: () => void
 }
 
 /**
@@ -35,6 +55,8 @@ export class Screen {
     private readonly releaseKeys: () => void
     private readonly releaseResize: () => void
     private timer: ReturnType<typeof setTimeout> | undefined
+    private flashTimer: ReturnType<typeof setTimeout> | undefined
+    private closed = false
 
     constructor(term: Term, options: ScreenOptions) {
         this.term = term
@@ -81,6 +103,32 @@ export class Screen {
         this.term.write(text)
     }
 
+    /**
+     * 在屏幕角落盖一条临时提示（复制结果这种），到点再把被盖住的内容重画回来。
+     *
+     * 内容直接写进字符网格，会盖住底下的内容；中途任何一次 `flush()` 也会把它冲掉。
+     * 写完后把光标放回状态行末尾，不然它停在提示右边缘。
+     */
+    flash(text: string, options: FlashOptions = {}): void {
+        const label = ` ${text} `
+        const width = visibleWidth(label)
+        if (width >= this.cols) return
+
+        const position = options.position ?? 'top-right'
+        const row = position.startsWith('top') ? 1 : this.rows
+        const col = position.endsWith('left') ? 1 : this.cols - width + 1
+        const paint = options.paint ?? inverse
+
+        this.write(`${moveTo(row, col)}${paint(label)}${moveTo(this.rows, this.cols)}`)
+
+        clearTimeout(this.flashTimer)
+        this.flashTimer = setTimeout(() => {
+            if (this.closed) return
+            options.restore?.()
+            this.write(moveTo(this.rows, this.cols))
+        }, options.duration ?? 1200)
+    }
+
     /** 把攒的行一次性写出去 */
     flush(): void {
         if (this.parts.length === 0) return
@@ -90,7 +138,9 @@ export class Screen {
 
     /** 归还键盘、摘 resize、退出 alternate screen */
     close(): void {
+        this.closed = true
         clearTimeout(this.timer)
+        clearTimeout(this.flashTimer)
         this.releaseResize()
         this.releaseKeys()
         this.term.write(ALT_SCREEN_OFF)

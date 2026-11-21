@@ -1,10 +1,10 @@
-import { cyan, inverse, moveTo } from '@/render/ansi.ts'
+import { cyan, inverse } from '@/render/ansi.ts'
 import { markMatches, matchesQuery } from '@/render/mark.ts'
-import { padEnd, truncateTo, visibleWidth } from '@/render/width.ts'
+import { padEnd, truncateTo } from '@/render/width.ts'
 import { wrapAnsi } from '@/render/wrap.ts'
 import { keyChord, lookupKey, resolveKeys, type Keymap } from '@/term/keys.ts'
 import type { Term } from '@/term/terminal.ts'
-import { Screen } from '@/term/tui/screen.ts'
+import { Screen, type FlashOptions } from '@/term/tui/screen.ts'
 import { cleanSelection, locateTitles, progress } from './logic.ts'
 
 export interface PagerLabels {
@@ -34,6 +34,8 @@ export interface PagerInput {
     readonly focusFrom?: number
     /** 键位覆盖，按动作替换默认值 */
     readonly keys?: Partial<Keymap<PagerAction>>
+    /** 复制提示的位置/时长/样式；不传用默认（右上角、1.2s、反显） */
+    readonly flash?: Omit<FlashOptions, 'restore'>
 }
 
 export type PagerAction =
@@ -100,9 +102,6 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
 
     /** pager 是否还在。复制是异步的，回来时可能已经 quit，不能再往终端写 */
     let active = true
-    /** 复制提示的定时器：提示写在字符网格里，到点要把那行重画回来 */
-    let toastTimer: ReturnType<typeof setTimeout> | undefined
-
     const height = (): number => Math.max(1, (screen?.rows ?? term.rows) - 1)
 
     /** 重新渲染并折行，按比例保住原来的阅读位置 */
@@ -194,31 +193,6 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
         screen.flush()
     }
 
-    /**
-     * 在屏幕右上角盖一条临时提示（复制结果这种），到点再把被盖住的那行重画回来。
-     *
-     * 内容直接写进字符网格，会盖住底下的正文；中途任何一次 draw() 也会把它冲掉。
-     * 写完后把光标放回状态行末尾，不然它停在提示右边缘。
-     */
-    const flash = (text: string): void => {
-        if (!screen) return
-        const label = ` ${text} `
-        const width = visibleWidth(label)
-        if (width >= screen.cols) return
-
-        screen.write(
-            `${moveTo(1, screen.cols - width + 1)}${inverse(label)}${moveTo(screen.rows, screen.cols)}`,
-        )
-
-        clearTimeout(toastTimer)
-        toastTimer = setTimeout(() => {
-            if (!active || !screen) return
-            screen.put(0, mode === 'outline' ? outlineText(0) : bodyText(0))
-            screen.flush()
-            screen.write(moveTo(screen.rows, screen.cols))
-        }, 1200)
-    }
-
     /** 返回是否真的滚动了（滚到头时返回 false） */
     const scrollTo = (next: number): boolean => {
         if (!screen || !screen.scroll.scrollTo(next)) return false
@@ -244,14 +218,16 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
             if (text === '') return
 
             void term.copy(text).then((ok) => {
-                if (!active) return
-                flash(ok ? '已复制' : '复制失败')
+                if (!active || !screen) return
+                screen.flash(ok ? '已复制' : '复制失败', {
+                    ...input.flash,
+                    restore: () => draw(),
+                })
             })
         }
 
         const quit = (): void => {
             active = false
-            clearTimeout(toastTimer)
             screen?.close()
             resolve()
         }
