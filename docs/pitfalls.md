@@ -40,7 +40,8 @@ readline 提交前会调 `State.refreshUnhighlighted()` 把这行重绘成无样
 
 ## 8. 定时器要清干净
 
-`matrix` 和 pager 的 resize 防抖都用 `setTimeout`。退出路径必须 `clearTimeout` + 摘掉
-`captureInput`/`onResize` 的监听，否则退出后还在往终端写东西。用裸 `setTimeout` 而不是
-`window.setTimeout`——测试在 node 里跑，`window` 不存在。`TuiSession.close()` 统一负责这件事，
-视图只需要在 `onHide` 里清自己的定时器。
+`MatrixView` 的逐帧动画、`TuiSession` 的 resize 防抖和 flash 都用 `setTimeout`。退出路径必须
+`clearTimeout` + 摘掉 `captureInput`/`onResize` 的监听，否则退出后还在往终端写东西。用裸
+`setTimeout` 而不是 `window.setTimeout`——测试在 node 里跑，`window` 不存在。
+`TuiSession.close()` 统一清它自己的定时器并归还输入；视图自己起的定时器在 `onHide` 里清
+（`MatrixView` 就是 `onHide` 停帧、`onShow` 重启）。

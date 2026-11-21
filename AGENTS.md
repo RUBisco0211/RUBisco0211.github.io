@@ -9,7 +9,7 @@
 | 文档                   | 内容                                                  |
 | ---------------------- | ----------------------------------------------------- |
 | **AGENTS.md**（本文）  | 必读：目录结构、核心契约、开发命令、最容易踩的几个坑  |
-| `docs/architecture.md` | 选型理由、TUI 组件、命令行着色、列对齐                |
+| `docs/architecture.md` | 选型理由、TUI 分层、命令行着色、列对齐                |
 | `docs/pitfalls.md`     | 全部踩坑记录（readline 私有 API、FitAddon、定时器等） |
 | `docs/deployment.md`   | GitHub Pages 部署、`base` 路径                        |
 | `docs/writing.md`      | 写文章：frontmatter、markdown 支持范围、图片放置      |
@@ -119,11 +119,12 @@ export function completePath(ctx: Ctx, current: string): Completion[]
 
 ### 2.2 跨层功能分层组合，别让 term 认识 content
 
-「把一篇文档丢进 pager」这类功能跨了 content / render / TUI，拆成两半：
+「把一篇文档丢进 pager」这类功能跨了 content / render / TUI，按职责拆开：
 
-- **tui** 只收通用的 `PagerInput`，入口 `runPager(term, input)`；不认识 `DocMeta`、frontmatter
+- **tui** 只收通用的 `PagerInput`，入口 `runPager(driver, input)`；不认识 `DocMeta`、frontmatter
 - **content** 只管文档本身（`DocMeta`、markdown→ANSI、标题提取），**不认识 pager**
-- **commands/utils/** 放命令间共享的适配器：`pager-input.ts` 的 `toPagerInput(doc, text, options): PagerInput`
+- **commands/utils/** 放命令间共享的适配器：`pager-input.ts` 的 `toPagerInput(doc, text, options)`
+  与 `outline.ts` 的 `openOutline`（目录功能，经 pager 的 `bindings` 挂上去）
 - **命令** 组合：`await runPager(ctx.term, toPagerInput(doc, text))`
 
 适配器归命令层（只有它同时认识 content 和 tui），不塞进 content 也不塞进 shell 根目录
@@ -176,7 +177,7 @@ aliases: {
 - **TUI 组件**：一次全屏交互 = 一个 `TuiSession`，从构造（抢输入 + 进 alt screen）到 `close()`；
   会话内是视图栈，视图实现 `TuiView = { draw(canvas), key?(event, session), wheel?, done?, onShow?, onHide? }`，
   结束自己只 resolve `done`，弹栈/关会话由会话决定——视图不自己 show 自己。
-  命令只看到 `select(term, ...)` / `runPager(term, ...)`（配 `toPagerInput`），
+  命令只看到 `select(ctx.term, ...)` / `runPager(ctx.term, ...)`（配 `toPagerInput`），
   不接触 alt screen / 输入锁 / resize。`captureInput` 排他，已接管时抛错；tui 只认 `TuiDriver` 接口。
 - **命令行着色**：`highlightLine()` 只能往字符之间插样式，**绝不能增删字符**（去色后必须和原行逐字符一致）。
 - **列对齐**：一律走 `render/table.ts`；单元格可带 ANSI/OSC 8，宽度按 `visibleWidth` 算，不做截断。

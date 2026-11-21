@@ -51,6 +51,9 @@ rubisco@tty.blog:~$ cat blog/从nvm迁移到fnm
 
 `Esc` 按状态逐级取消：搜索 / 目录下返回正文；浏览下先清选区，再清搜索，最后才退出。
 
+全屏列表（`tags` / `theme` / `history` / 目录）：`↑` `↓`（或 `j` `k`）/ 滚轮移动，
+`Enter` 确认，`Esc` 取消；带筛选的列表直接打字过滤。
+
 ## 本地开发
 
 需要 Node 26。

@@ -54,7 +54,7 @@ await view.done // 视图结束自己；栈空时 session 自动 close()
   它只暴露 `renderedLines()` / `jumpTo(line)` 和 `bindings` 扩展点；目录这类功能由命令层组合，
   见 `commands/utils/outline.ts`
 
-命令只看到薄壳 `select(term, ...)` / `runPager(term, ...)`（内部 `new TuiSession` + `open` + 等 `done`），
+命令只看到薄壳 `select(ctx.term, ...)` / `runPager(ctx.term, ...)`（内部 `new TuiSession` + `open` + 等 `done`），
 文档排版在 `commands/utils/pager-input.ts` 的 `toPagerInput`：这是 cat / search / tags 共用的
 命令层辅助件，只有命令层同时认识 content 和 tui。目录功能同理放在 `commands/utils/outline.ts`：
 `toPagerInput` 通过 `bindings` 把 `t` 挂到 `openOutline()`，pager 不知道目录存在。
@@ -72,7 +72,7 @@ await view.done // 视图结束自己；栈空时 session 自动 close()
 | `tui/canvas.ts`                 | `Canvas`：纯画布                                                            |
 | `tui/view.ts`                   | `TuiView` 接口                                                              |
 | `tui/components/list.ts`        | `ListCursor`：选中索引 + 可视窗口                                           |
-| `tui/components/scroll.ts`      | `Scroll`：offset / 翻页 / 滚轮累积                                          |
+| `tui/components/scroll.ts`      | `Scroll`：offset / 翻页 / 滚轮累积；`WheelLines`：滚轮像素 → 整行           |
 | `tui/components/text-input.ts`  | `TextInput`：Backspace + 可打印字符                                         |
 | `tui/components/status.ts`      | `statusBar()`：整行反显，放不下从头部丢提示                                 |
 | `tui/views/select.ts`           | `SelectView` + `select(driver, ...)` 薄壳                                   |
