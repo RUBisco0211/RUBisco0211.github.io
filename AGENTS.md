@@ -33,7 +33,7 @@ src/
     pager/             index.ts 交互循环 + logic.ts 纯逻辑
   shell/              tokenize / alias / registry / fs / path / complete / error
     commands/         一条命令一个文件 + 手动在 index.ts 注册
-                      （reader.ts 这类命令支撑件也放这里，但不进命令表）
+  utils/              跨层工具（reader.ts：把一篇文档丢进 pager）
   content/            内容树视图、字数格式化、搜索
   theme/              themes/<名字>.ts（每套含 light/dark 两个变体）+ 聚合 + store
 plugins/site-content.ts   content/ → virtual:site-tree

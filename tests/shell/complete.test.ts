@@ -90,27 +90,27 @@ test('替换区间只覆盖当前 token', () => {
 })
 
 test('completePath 处理子目录和 ~', () => {
-    const shell = setup()
+    // 窄签名：不需要 createShell，只造 cwd + fs
+    const scope = { cwd: '/', fs: buildFs(docs) }
     assert.deepEqual(
-        completePath(shell.ctx, 'blog/').map((c) => c.value),
+        completePath(scope, 'blog/').map((c) => c.value),
         ['blog/世界', 'blog/hello'],
     )
     assert.deepEqual(
-        completePath(shell.ctx, '~/b').map((c) => c.value),
+        completePath(scope, '~/b').map((c) => c.value),
         ['~/blog/'],
     )
-    assert.deepEqual(completePath(shell.ctx, 'nope/'), [])
+    assert.deepEqual(completePath(scope, 'nope/'), [])
 })
 
-test('completePath 在 cwd 内解析相对路径', async () => {
-    const shell = setup()
-    await shell.run('cd blog')
+test('completePath 在 cwd 内解析相对路径', () => {
+    const scope = { cwd: '/blog', fs: buildFs(docs) }
     assert.deepEqual(
-        completePath(shell.ctx, 'h').map((c) => c.value),
+        completePath(scope, 'h').map((c) => c.value),
         ['hello'],
     )
     assert.deepEqual(
-        completePath(shell.ctx, '../').map((c) => c.value),
+        completePath(scope, '../').map((c) => c.value),
         ['../blog/', '../about'],
     )
 })

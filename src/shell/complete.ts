@@ -1,4 +1,4 @@
-import { getNode } from './fs.ts'
+import { getNode, type Fs } from './fs.ts'
 import { resolvePath } from './path.ts'
 import { tokenize } from './tokenize.ts'
 import type { Completion, Ctx } from './types.ts'
@@ -66,14 +66,21 @@ export function completeLine(ctx: Ctx, line: string): CompletionResult {
  *   'bl'      →  [{ value: 'blog/' }]
  *   'blog/2'  →  [{ value: 'blog/2026/' }]
  *   '~/bl'    →  [{ value: '~/blog/' }]
+ *
+ * 只收它真正需要的 `cwd` + `fs`，不收整个 `Ctx`——这样能脱离 shell 单测。
+ * `Ctx` 结构上满足这个类型，所以命令里 `completePath(ctx, …)` 原样可用。
  */
-export function completePath(ctx: Ctx, current: string): Completion[] {
+export function completePath(
+    scope: { readonly cwd: string; readonly fs: Fs },
+    current: string,
+): Completion[] {
+    const { cwd, fs } = scope
     const cut = current.lastIndexOf('/')
     const dirPart = cut === -1 ? '' : current.slice(0, cut + 1)
     const prefix = cut === -1 ? current : current.slice(cut + 1)
 
-    const base = dirPart === '' ? ctx.cwd : resolvePath(ctx.cwd, dirPart)
-    const node = getNode(ctx.fs, base)
+    const base = dirPart === '' ? cwd : resolvePath(cwd, dirPart)
+    const node = getNode(fs, base)
     if (!node) return []
 
     const out: Completion[] = []

@@ -1,5 +1,5 @@
-import type { DocMeta } from '../../content/types.ts'
-import type { Ctx } from '../types.ts'
+import type { DocMeta } from '../content/types.ts'
+import type { Term } from '../term/terminal.ts'
 
 export interface ReadOptions {
     /** 打开后立即定位到这个搜索词，并高亮所有匹配（从 search 跳过来时用） */
@@ -7,21 +7,24 @@ export interface ReadOptions {
 }
 
 /**
- * 在 pager 里打开一篇文档
+ * 在 pager 里打开一篇文档。
  *
+ * 只依赖 `Term`——它不读 fs / content / config，正文由调用方取好再传进来。
+ * 之所以放在 utils 而不是 commands：它不是一条命令，而是 cat / search / tags
+ * 共用的「把一篇文档丢进阅读器」的动作。
  */
 export async function readDoc(
-    ctx: Ctx,
+    term: Term,
     doc: DocMeta,
     text: string,
     options: ReadOptions = {},
 ): Promise<void> {
     const [{ renderMarkdown, headingTitles }, { runPager }, { dim }, { formatTable }] =
         await Promise.all([
-            import('../../render/markdown.ts'),
-            import('../../term/pager/index.ts'),
-            import('../../render/ansi.ts'),
-            import('../../render/table.ts'),
+            import('../render/markdown.ts'),
+            import('../term/pager/index.ts'),
+            import('../render/ansi.ts'),
+            import('../render/table.ts'),
         ])
 
     const outline = headingTitles(text)
@@ -35,7 +38,7 @@ export async function readDoc(
     const bodyStart = meta.length + 1
 
     // 视口变了 pager 会带着新宽度再调一次 render
-    await runPager(ctx.term, {
+    await runPager(term, {
         title: doc.title,
         outline,
         focus: options.focus,

@@ -2,7 +2,7 @@ import { searchDocs } from '../../content/search.ts'
 import type { SearchHit } from '../../content/search.ts'
 import { dim } from '../../render/ansi.ts'
 import { select } from '../../term/select.ts'
-import { readDoc } from './reader.ts'
+import { readDoc } from '../../utils/reader.ts'
 import { fail, printUsage } from '../error.ts'
 import type { Command } from '../types.ts'
 
@@ -35,7 +35,7 @@ const search: Command = {
 
         const text = await ctx.content.text(picked.doc.slug)
         if (text === undefined) fail(`正文加载失败：${picked.doc.slug}`)
-        await readDoc(ctx, picked.doc, text, { focus: picked.term })
+        await readDoc(ctx.term, picked.doc, text, { focus: picked.term })
     },
 }
 

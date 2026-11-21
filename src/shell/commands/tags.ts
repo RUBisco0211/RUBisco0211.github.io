@@ -1,7 +1,7 @@
 import type { DocMeta } from '../../content/types.ts'
 import { dim } from '../../render/ansi.ts'
 import { select } from '../../term/select.ts'
-import { readDoc } from './reader.ts'
+import { readDoc } from '../../utils/reader.ts'
 import { fail } from '../error.ts'
 import type { Command, Ctx } from '../types.ts'
 
@@ -54,7 +54,7 @@ async function pickTagDocs(ctx: Ctx, bucket: TagBucket): Promise<void> {
     const doc = ctx.content.find(picked)
     const text = await ctx.content.text(picked)
     if (!doc || text === undefined) fail(`正文加载失败：${picked}`)
-    await readDoc(ctx, doc, text)
+    await readDoc(ctx.term, doc, text)
 }
 
 const tags: Command = {
