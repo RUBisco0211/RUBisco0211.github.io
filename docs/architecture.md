@@ -18,12 +18,14 @@
 
 ## TUI 组件：pager 和 select
 
-两个都走同一套模式：**alternate screen**（`\x1b[?1049h` / `l`）+ `Term.captureKeys()` 全量接管键盘 +
-逐行 `\x1b[{row};1H\x1b[2K` 重绘 + `onResize` 重排（alt buffer 不 reflow，尺寸变了必须整屏重来）。
+两者共用 `term/tui/screen.ts` 的 `enterFullscreen()`：切 alternate screen、`Term.captureKeys()`
+接管键盘、`onResize` 防抖重排、退出时清理（归还键盘 + 摘 resize + 退出 alt screen）。
+绘制和状态机各自保留——pager 有多模式，select 有筛选，硬套同一绘制抽象会泄漏。
 
-- `term/pager/` 整屏阅读器：`index.ts` 是交互循环（搜索 `/` 后 `n`/`N`、目录跳转 `t`、滚轮、翻页），
+- `term/tui/pager/` 整屏阅读器：`index.ts` 是交互循环（搜索 `/` 后 `n`/`N`、目录跳转 `t`、滚轮、翻页），
   `logic.ts` 是纯逻辑（滚动换算、标题定位、状态栏、选区清理），不碰 `Term`，直接在 node 里测
-- `term/select.ts` 通用单选列表：`theme` 和 `history` 用，支持 `filterable` 的输入筛选
+- `term/tui/select.ts` 通用单选列表：`theme`、`history`、`tags`、`search` 用，支持 `filterable` 的输入筛选
+- `term/tui/window.ts`：`clampWindow`，pager 目录模式和 select 共用
 
 命令里 `await` 它们，所以占用期间 shell 不会去调 `term.read()`——两者天然互斥，shell 不用改。
 

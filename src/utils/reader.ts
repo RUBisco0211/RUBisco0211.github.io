@@ -22,7 +22,7 @@ export async function readDoc(
     const [{ renderMarkdown, headingTitles }, { runPager }, { dim }, { formatTable }] =
         await Promise.all([
             import('../render/markdown.ts'),
-            import('../term/pager/index.ts'),
+            import('../term/tui/pager/index.ts'),
             import('../render/ansi.ts'),
             import('../render/table.ts'),
         ])

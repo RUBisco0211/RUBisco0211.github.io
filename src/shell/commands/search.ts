@@ -1,7 +1,7 @@
 import { searchDocs } from '../../content/search.ts'
 import type { SearchHit } from '../../content/search.ts'
 import { dim } from '../../render/ansi.ts'
-import { select } from '../../term/select.ts'
+import { select } from '../../term/tui/select.ts'
 import { readDoc } from '../../utils/reader.ts'
 import { fail, printUsage } from '../error.ts'
 import type { Command } from '../types.ts'

@@ -5,8 +5,8 @@
  * 交互循环（切 alt screen、捕获按键、重绘）留在 index.ts。
  */
 
-import { inverse } from '../../render/ansi.ts'
-import { padEnd, stripAnsi, truncateTo, visibleWidth } from '../../render/width.ts'
+import { inverse } from '../../../render/ansi.ts'
+import { padEnd, stripAnsi, truncateTo, visibleWidth } from '../../../render/width.ts'
 
 /** 多少像素算一行。鼠标滚轮一格约 100px，所以一格 ≈ 1.25 行 */
 const PIXELS_PER_LINE = 80

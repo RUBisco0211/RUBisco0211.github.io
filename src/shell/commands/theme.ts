@@ -1,5 +1,5 @@
 import { green } from '../../render/ansi.ts'
-import { select } from '../../term/select.ts'
+import { select } from '../../term/tui/select.ts'
 import { fail } from '../error.ts'
 import type { Command, Ctx } from '../types.ts'
 

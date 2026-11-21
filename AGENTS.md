@@ -27,8 +27,8 @@ src/
   config.ts           站点配置：user/host/字体/主题/alias
   storage.ts          localStorage 唯一入口（统一前缀）
   render/             ANSI 原语、显示宽度、折行、语法着色、markdown→ANSI、列对齐
-  term/               xterm 封装、pager/select 整屏组件、命令历史
-    pager/             index.ts 交互循环 + logic.ts 纯逻辑
+  term/               xterm 封装、整屏 TUI、命令历史
+    tui/              screen.ts 公共生命周期 + pager/ + select.ts + window.ts
   shell/              tokenize / alias / registry / fs / path / complete / error
     commands/         一条命令一个文件 + 手动在 index.ts 注册
   utils/              跨层工具（reader.ts：把一篇文档丢进 pager）
@@ -164,8 +164,8 @@ aliases: {
 
 细节见 `docs/architecture.md`。三条硬约束先记住：
 
-- **pager/select**：alternate screen + `Term.captureKeys()` 全量接管键盘 + `onResize` 整屏重排
-  （alt buffer 不 reflow）。命令里 `await` 它们，占用期间 shell 不会调 `term.read()`。
+- **pager/select**：`term/tui/screen.ts` 统一进场/出场（alternate screen + `Term.captureKeys()`
+  - `onResize` 整屏重排）。命令里 `await` 它们，占用期间 shell 不会调 `term.read()`。
 - **命令行着色**：`highlightLine()` 只能往字符之间插样式，**绝不能增删字符**（去色后必须和原行逐字符一致）。
 - **列对齐**：一律走 `render/table.ts`；单元格可带 ANSI/OSC 8，宽度按 `visibleWidth` 算，不做截断。
 

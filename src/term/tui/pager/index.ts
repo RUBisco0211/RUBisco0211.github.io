@@ -1,17 +1,10 @@
-import {
-    ALT_SCREEN_OFF,
-    ALT_SCREEN_ON,
-    CLEAR_SCREEN,
-    ERASE_LINE,
-    cyan,
-    inverse,
-    moveTo,
-} from '../../render/ansi.ts'
-import { markMatches, matchesQuery } from '../../render/mark.ts'
-import { clampWindow } from '../select.ts'
-import { keyChord, lookupKey, resolveKeys, type Keymap } from '../keys.ts'
-import type { Term } from '../terminal.ts'
-import { padEnd, truncateTo, visibleWidth } from '../../render/width.ts'
+import { ERASE_LINE, cyan, inverse, moveTo } from '../../../render/ansi.ts'
+import { markMatches, matchesQuery } from '../../../render/mark.ts'
+import { enterFullscreen, type Fullscreen } from '../screen.ts'
+import { clampWindow } from '../window.ts'
+import { keyChord, lookupKey, resolveKeys, type Keymap } from '../../keys.ts'
+import type { Term } from '../../terminal.ts'
+import { padEnd, truncateTo, visibleWidth } from '../../../render/width.ts'
 import {
     clampOffset,
     cleanSelection,
@@ -19,7 +12,7 @@ import {
     locateTitles,
     pagerStatus,
 } from './logic.ts'
-import { wrapAnsi } from '../../render/wrap.ts'
+import { wrapAnsi } from '../../../render/wrap.ts'
 
 export interface PagerLabels {
     /** 目录模式的标题，拼在文档标题后面 */
@@ -275,24 +268,9 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
         }
     }
 
-    term.write(`${ALT_SCREEN_ON}${CLEAR_SCREEN}`)
-    draw()
-
-    // 视口变了就重排。xterm 的 alt buffer 不会 reflow，所以必须整屏重画
-    let resizeTimer: ReturnType<typeof setTimeout> | undefined
-    const releaseResize = term.onResize(() => {
-        clearTimeout(resizeTimer)
-        resizeTimer = setTimeout(() => {
-            cols = term.cols
-            rows = term.rows
-            height = Math.max(1, rows - 1)
-            rebuild()
-            draw()
-        }, 80)
-    })
-
     return new Promise<void>((resolve) => {
         const wheel = createWheelAccumulator()
+        let screen: Fullscreen | undefined
 
         /** 复制当前选区，右上角提示结果 */
         const copySelection = (): void => {
@@ -311,10 +289,7 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
         const quit = (): void => {
             active = false
             clearTimeout(toastTimer)
-            clearTimeout(resizeTimer)
-            releaseResize()
-            release()
-            term.write(ALT_SCREEN_OFF)
+            screen?.close()
             resolve()
         }
 
@@ -442,8 +417,8 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
             return true
         }
 
-        const release = term.captureKeys(
-            (event) => {
+        screen = enterFullscreen(term, {
+            onKey: (event) => {
                 // 带修饰键的复制快捷键（⌘C / Ctrl+Shift+C）在三个模式下都生效，
                 // 否则搜索/目录模式会把组合键吞掉。裸键位（y）不在这里拦，
                 // 否则搜索模式里的 y 就打不出来了
@@ -456,13 +431,21 @@ export function runPager(term: Term, input: PagerInput): Promise<void> {
                 else if (mode === 'outline') handleOutlineKey(event)
                 else handleBrowseKey(event)
             },
-            (deltaY, deltaMode) => {
+            onWheel: (deltaY, deltaMode) => {
                 if (mode !== 'browse') return
                 const step = wheel.next(deltaY, deltaMode)
                 if (step === 0) return
                 // 滚到头了就把攒着的小数丢掉，免得反向时先空转
                 if (!scrollTo(offset + step)) wheel.reset()
             },
-        )
+            onResize: () => {
+                cols = term.cols
+                rows = term.rows
+                height = Math.max(1, rows - 1)
+                rebuild()
+                draw()
+            },
+        })
+        draw()
     })
 }

@@ -1,16 +1,9 @@
-import {
-    ALT_SCREEN_OFF,
-    ALT_SCREEN_ON,
-    CLEAR_SCREEN,
-    ERASE_LINE,
-    bold,
-    cyan,
-    dim,
-    moveTo,
-} from '../render/ansi.ts'
-import { lookupKey, resolveKeys, type Keymap } from './keys.ts'
-import type { Term } from './terminal.ts'
-import { truncateTo } from '../render/width.ts'
+import { ERASE_LINE, bold, cyan, dim, moveTo } from '../../render/ansi.ts'
+import { truncateTo } from '../../render/width.ts'
+import { lookupKey, resolveKeys, type Keymap } from '../keys.ts'
+import type { Term } from '../terminal.ts'
+import { enterFullscreen, type Fullscreen } from './screen.ts'
+import { clampWindow } from './window.ts'
 
 export interface SelectItem<T> {
     readonly value: T
@@ -62,29 +55,20 @@ export function filterItems<T>(
     )
 }
 
-/** 让选中项始终留在可视窗口里 */
-export function clampWindow(index: number, offset: number, visible: number): number {
-    if (index < offset) return index
-    if (index >= offset + visible) return index - visible + 1
-    return offset
-}
-
 /**
  * 整屏单选列表。
  *
- * 用 alternate screen 铺满一屏，退出时原屏幕还原
- * 键盘由 Term.captureKeys 处理
+ * 用 alternate screen 铺满一屏，退出时原屏幕还原。
+ * 键盘、resize、清理统一交给 `enterFullscreen`。
  *
- * 返回选中的项
- * 按 Esc / q 取消时返回 undefined
- *
+ * 返回选中的项；按 Esc / q 取消时返回 undefined。
  */
 export function select<T>(term: Term, options: SelectOptions<T>): Promise<T | undefined> {
     if (options.items.length === 0) return Promise.resolve(undefined)
 
-    const rows = term.rows
-    const cols = term.cols
-    const visible = Math.max(1, rows - 3)
+    let rows = term.rows
+    let cols = term.cols
+    let visible = Math.max(1, rows - 3)
     const keymap = resolveKeys(DEFAULT_KEYS, options.keys)
 
     let query = ''
@@ -122,15 +106,11 @@ export function select<T>(term: Term, options: SelectOptions<T>): Promise<T | un
         term.write(parts.join(''))
     }
 
-    term.write(`${ALT_SCREEN_ON}${CLEAR_SCREEN}`)
-    draw()
-    const initialItem = items[index]
-    if (initialItem) options.onHighlight?.(initialItem, index)
-
     return new Promise((resolve) => {
+        let fullscreen: Fullscreen | undefined
+
         const finish = (result: SelectItem<T> | undefined): void => {
-            release()
-            term.write(ALT_SCREEN_OFF)
+            fullscreen?.close()
             resolve(result?.value)
         }
 
@@ -154,33 +134,50 @@ export function select<T>(term: Term, options: SelectOptions<T>): Promise<T | un
             if (items[0]) options.onHighlight?.(items[0], 0)
         }
 
-        const release = term.captureKeys((event) => {
-            // 可筛选时，可打印字符先给筛选框（j/k/q 也不例外）
-            if (options.filterable) {
-                if (event.key === 'Backspace') {
-                    refilter(query.slice(0, -1))
-                    return
+        fullscreen = enterFullscreen(term, {
+            onKey: (event) => {
+                // 可筛选时，可打印字符先给筛选框（j/k/q 也不例外）
+                if (options.filterable) {
+                    if (event.key === 'Backspace') {
+                        refilter(query.slice(0, -1))
+                        return
+                    }
+                    if (
+                        event.key.length === 1 &&
+                        !event.ctrlKey &&
+                        !event.metaKey &&
+                        !event.altKey
+                    ) {
+                        refilter(query + event.key)
+                        return
+                    }
                 }
-                if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
-                    refilter(query + event.key)
-                    return
-                }
-            }
 
-            switch (lookupKey(keymap, event)) {
-                case 'confirm':
-                    finish(items[index])
-                    return
-                case 'cancel':
-                    finish(undefined)
-                    return
-                case 'up':
-                    move(-1)
-                    return
-                case 'down':
-                    move(1)
-                    return
-            }
+                switch (lookupKey(keymap, event)) {
+                    case 'confirm':
+                        finish(items[index])
+                        return
+                    case 'cancel':
+                        finish(undefined)
+                        return
+                    case 'up':
+                        move(-1)
+                        return
+                    case 'down':
+                        move(1)
+                        return
+                }
+            },
+            onResize: () => {
+                rows = term.rows
+                cols = term.cols
+                visible = Math.max(1, rows - 3)
+                draw()
+            },
         })
+
+        draw()
+        const initialItem = items[index]
+        if (initialItem) options.onHighlight?.(initialItem, index)
     })
 }

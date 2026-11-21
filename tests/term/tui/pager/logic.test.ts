@@ -6,9 +6,9 @@ import {
     createWheelAccumulator,
     locateTitles,
     pagerStatus,
-} from '../../../src/term/pager/logic.ts'
-import { visibleWidth } from '../../../src/render/width.ts'
-import { MIN_COLS, MIN_ROWS } from '../../../src/term/size.ts'
+} from '../../../../src/term/tui/pager/logic.ts'
+import { visibleWidth } from '../../../../src/render/width.ts'
+import { MIN_COLS, MIN_ROWS } from '../../../../src/term/size.ts'
 
 const plain = (text: string): string => text.replace(/\x1b\[[0-9;]*m/g, '')
 
