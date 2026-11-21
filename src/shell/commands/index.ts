@@ -1,37 +1,15 @@
 import type { Command } from '../types.ts'
-import ansi from './ansi.ts'
-import cat from './cat.ts'
-import cd from './cd.ts'
-import clear from './clear.ts'
-import echo from './echo.ts'
-import help from './help.ts'
-import history from './history.ts'
-import ls from './ls.ts'
-import matrix from './matrix.ts'
-import neofetch from './neofetch.ts'
-import pwd from './pwd.ts'
-import search from './search.ts'
-import stats from './stats.ts'
-import tags from './tags.ts'
-import theme from './theme.ts'
-import tree from './tree.ts'
 
-/** 命令表，顺序即 `help` 里的列出顺序 */
-export const commands: readonly Command[] = [
-    ansi,
-    cat,
-    cd,
-    clear,
-    echo,
-    help,
-    history,
-    ls,
-    matrix,
-    neofetch,
-    pwd,
-    search,
-    stats,
-    tags,
-    theme,
-    tree,
-]
+/**
+ * 自动注册：本目录下除了 index.ts 的所有模块，若默认导出一个 Command 就收进来。
+ *
+ * `reader.ts` 这种命令支撑件没有默认导出，会被下面的 filter 自然跳过，
+ * 所以「丢一个文件进 commands/，别处零改动」依然成立。
+ */
+const modules = import.meta.glob<{ default?: Command }>(['./*.ts', '!./index.ts'], {
+    eager: true,
+})
+
+export const commands: readonly Command[] = Object.values(modules)
+    .map((module) => module.default)
+    .filter((command): command is Command => command !== undefined)

@@ -1,7 +1,7 @@
 import { completePath } from '../complete.ts'
 import { fail, printUsage } from '../error.ts'
 import { lookup, type FileEntry } from '../fs.ts'
-import { readDoc } from '../reader.ts'
+import { readDoc } from './reader.ts'
 import type { Command, Ctx } from '../types.ts'
 
 export interface ResolvedDoc {

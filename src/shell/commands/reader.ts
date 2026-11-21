@@ -1,5 +1,5 @@
-import type { DocMeta } from '../content/types.ts'
-import type { Ctx } from './types.ts'
+import type { DocMeta } from '../../content/types.ts'
+import type { Ctx } from '../types.ts'
 
 export interface ReadOptions {
     /** 打开后立即定位到这个搜索词，并高亮所有匹配（从 search 跳过来时用） */
@@ -18,10 +18,10 @@ export async function readDoc(
 ): Promise<void> {
     const [{ renderMarkdown, headingTitles }, { runPager }, { dim }, { formatTable }] =
         await Promise.all([
-            import('../render/markdown.ts'),
-            import('../term/pager/index.ts'),
-            import('../render/ansi.ts'),
-            import('../render/table.ts'),
+            import('../../render/markdown.ts'),
+            import('../../term/pager/index.ts'),
+            import('../../render/ansi.ts'),
+            import('../../render/table.ts'),
         ])
 
     const outline = headingTitles(text)
