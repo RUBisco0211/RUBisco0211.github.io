@@ -33,6 +33,34 @@ test('setVisible 重算窗口', () => {
     assert.equal(list.offset, 4)
 })
 
+test('setBounds 不让占位视口先把窗口钉到光标上', () => {
+    // 构造时只拿得到占位视口 1 行，首次布局必须一次夹准
+    const list = new ListCursor({ total: 10, visible: 1, initial: 4 })
+    list.setBounds(10, 7)
+    assert.equal(list.offset, 0)
+    assert.equal(list.index, 4)
+})
+
+test('setBounds 装得下时窗口回到顶部', () => {
+    const list = new ListCursor({ total: 10, visible: 3, initial: 9 })
+    list.setBounds(10, 3)
+    assert.equal(list.offset, 7) // 视口太矮，先跟着 initial 滚到底
+    list.setBounds(10, 20)
+    assert.equal(list.offset, 0) // 装得下就不再滚动
+})
+
+test('move 越界后窗口才滚动，选中项夹在边行', () => {
+    const list = new ListCursor({ total: 10, visible: 3 })
+    list.setBounds(10, 3)
+    list.move(1)
+    list.move(1)
+    assert.equal(list.offset, 0) // 选中项（index 2）仍在窗口内，不滚
+    list.move(1)
+    assert.equal(list.offset, 1) // index 3 越界，窗口滑到 1..3，选中项在最后一行
+    list.move(-1)
+    assert.equal(list.offset, 1) // 回到窗口内，不滚
+})
+
 test('reset 回到第一项', () => {
     const list = new ListCursor({ total: 10, visible: 5 })
     list.move(5)

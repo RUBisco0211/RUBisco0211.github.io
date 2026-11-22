@@ -94,8 +94,8 @@ export class SelectView<T> implements TuiView {
     }
 
     draw(canvas: Canvas): void {
-        this.list.setTotal(this.items.length)
-        this.list.setVisible(Math.max(1, canvas.rows - 3))
+        // 总数与视口必须一起夹，否则占位视口（1 行）会先把窗口钉到初始选中项上
+        this.list.setBounds(this.items.length, Math.max(1, canvas.rows - 3))
 
         const heading =
             this.filter.value === ''
@@ -124,7 +124,7 @@ export class SelectView<T> implements TuiView {
         canvas.put(canvas.rows - 1, dim(`${position}　${this.options.labels.footer}`))
     }
 
-    /** 滚轮上下移动选中项（ListCursor 会让它一直在视口里） */
+    /** 滚轮上下移动选中项（ListCursor 只在选中项越界时才滚动） */
     wheel(deltaY: number, deltaMode: number): void {
         const lines = this.wheelLines.take(deltaY, deltaMode)
         if (lines === 0) return
